@@ -1,0 +1,20 @@
+
+[project]
+name = "conversa-agent-server"
+version = "0.1.0"
+description = "Independent real-time conversation intelligence agent"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi[standard]",
+    "pydantic-settings"
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "httpx",
+    "ruff"
+]
+
+[tool.ruff]
+line-length = 100
