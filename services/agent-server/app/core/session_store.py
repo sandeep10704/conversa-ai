@@ -1,32 +1,71 @@
+"""Session store backed by PostgreSQL repository."""
 
-from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from uuid import UUID
 
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database.repository import SessionRepository
+from app.database.session import async_session_factory, get_db_session
 from app.schemas.session import (
     CreateSessionRequest,
-    SessionResponse
+    SessionResponse,
 )
 
 
-class InMemorySessionStore:
-
-    def __init__(self):
-        self._sessions: dict[UUID, SessionResponse] = {}
-
-    def create(self, request: CreateSessionRequest):
-        session = SessionResponse(
-            session_id=uuid4(),
-            status="active",
-            created_at=datetime.now(timezone.utc),
-            **request.model_dump()
-        )
-
-        self._sessions[session.session_id] = session
-
-        return session
-
-    def get(self, session_id: UUID):
-        return self._sessions.get(session_id)
+async def get_session_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> SessionRepository:
+    """FastAPI dependency for SessionRepository."""
+    return SessionRepository(session)
 
 
-session_store = InMemorySessionStore()
+class SessionStore:
+    """Session store interface delegating to SessionRepository."""
+
+    @staticmethod
+    async def create(
+        request: CreateSessionRequest,
+        db: AsyncSession | None = None,
+    ) -> SessionResponse:
+        """Create a new session in PostgreSQL."""
+        if db is not None:
+            repo = SessionRepository(db)
+            return await repo.create(request)
+
+        async with async_session_factory()() as session:
+            async with session.begin():
+                repo = SessionRepository(session)
+                return await repo.create(request)
+
+    @staticmethod
+    async def get(
+        session_id: UUID,
+        db: AsyncSession | None = None,
+    ) -> SessionResponse | None:
+        """Retrieve a session from PostgreSQL."""
+        if db is not None:
+            repo = SessionRepository(db)
+            return await repo.get(session_id)
+
+        async with async_session_factory()() as session:
+            repo = SessionRepository(session)
+            return await repo.get(session_id)
+
+    @staticmethod
+    async def delete(
+        session_id: UUID,
+        db: AsyncSession | None = None,
+    ) -> bool:
+        """Delete a session from PostgreSQL."""
+        if db is not None:
+            repo = SessionRepository(db)
+            return await repo.delete(session_id)
+
+        async with async_session_factory()() as session:
+            async with session.begin():
+                repo = SessionRepository(session)
+                return await repo.delete(session_id)
+
+
+session_store = SessionStore()

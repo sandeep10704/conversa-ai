@@ -1,58 +1,60 @@
-from datetime import datetime, timezone
-from threading import Lock
+"""Conversation store backed by PostgreSQL repository."""
+
 from uuid import UUID
 
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database.repository import (
+    ConversationRepository,
+    SessionNotFoundError,
+)
+from app.database.session import async_session_factory, get_db_session
 from app.schemas.conversation import (
     TranscriptMessageRequest,
-    TranscriptMessageResponse
+    TranscriptMessageResponse,
 )
 
 
-class InMemoryConversationStore:
+async def get_conversation_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> ConversationRepository:
+    """FastAPI dependency for ConversationRepository."""
+    return ConversationRepository(session)
 
-    def __init__(self):
 
-        self._messages = {}
-        self._lock = Lock()
+class ConversationStore:
+    """Conversation store interface delegating to ConversationRepository."""
 
-    def add_message(
-        self,
+    @staticmethod
+    async def add_message(
         session_id: UUID,
-        request: TranscriptMessageRequest
-    ):
+        request: TranscriptMessageRequest,
+        db: AsyncSession | None = None,
+    ) -> TranscriptMessageResponse:
+        """Append a message to PostgreSQL session."""
+        if db is not None:
+            repo = ConversationRepository(db)
+            return await repo.add_message(session_id, request)
 
-        with self._lock:
+        async with async_session_factory()() as session:
+            async with session.begin():
+                repo = ConversationRepository(session)
+                return await repo.add_message(session_id, request)
 
-            messages = self._messages.setdefault(
-                session_id,
-                []
-            )
+    @staticmethod
+    async def get_messages(
+        session_id: UUID,
+        db: AsyncSession | None = None,
+    ) -> list[TranscriptMessageResponse]:
+        """Retrieve chronological messages for a session from PostgreSQL."""
+        if db is not None:
+            repo = ConversationRepository(db)
+            return await repo.get_messages(session_id)
 
-            # Avoid processing duplicate events
-            for message in messages:
-
-                if message.event_id == request.event_id:
-                    return message
-
-            sequence_number = len(messages) + 1
-
-            response = TranscriptMessageResponse(
-                event_id=request.event_id,
-                session_id=session_id,
-                sequence_number=sequence_number,
-                text=request.text,
-                source=request.source,
-                created_at=datetime.now(timezone.utc)
-            )
-
-            messages.append(response)
-
-            return response
-
-    def get_messages(self, session_id: UUID):
-
-        with self._lock:
-            return list(self._messages.get(session_id, []))
+        async with async_session_factory()() as session:
+            repo = ConversationRepository(session)
+            return await repo.get_messages(session_id)
 
 
-conversation_store = InMemoryConversationStore()
+conversation_store = ConversationStore()

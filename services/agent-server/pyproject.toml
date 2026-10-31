@@ -5,8 +5,16 @@ version = "0.1.0"
 description = "Independent real-time conversation intelligence agent"
 requires-python = ">=3.10"
 dependencies = [
+    "aiosqlite>=0.20.0",
+    "alembic>=1.13.0",
+    "asyncpg>=0.29.0",
     "fastapi[standard]",
-    "pydantic-settings"
+    "greenlet>=3.0.0",
+    "langchain-openrouter>=0.2.9",
+    "langgraph>=1.2.19",
+    "pydantic-settings",
+    "python-dotenv>=1.2.4",
+    "sqlalchemy>=2.0.0",
 ]
 
 [dependency-groups]

@@ -1,16 +1,16 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.core.session_store import session_store
-
-from app.core.conversation_store import conversation_store
-
+from app.core.conversation_store import get_conversation_repository
+from app.database.repository import (
+    ConversationRepository,
+    SessionNotFoundError,
+)
 from app.schemas.conversation import (
     TranscriptMessageRequest,
-    TranscriptMessageResponse
+    TranscriptMessageResponse,
 )
-
 
 router = APIRouter(
     prefix="/sessions",
@@ -25,37 +25,30 @@ router = APIRouter(
 )
 async def add_message(
     session_id: UUID,
-    request: TranscriptMessageRequest
+    request: TranscriptMessageRequest,
+    conv_repo: ConversationRepository = Depends(get_conversation_repository),
 ):
-
-    session = session_store.get(session_id)
-
-    if session is None:
-
+    try:
+        return await conv_repo.add_message(session_id, request)
+    except SessionNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Session not found"
         )
-
-    return conversation_store.add_message(
-        session_id,
-        request
-    )
 
 
 @router.get(
     "/{session_id}/messages",
     response_model=list[TranscriptMessageResponse]
 )
-async def get_messages(session_id: UUID):
-
-    session = session_store.get(session_id)
-
-    if session is None:
-
+async def get_messages(
+    session_id: UUID,
+    conv_repo: ConversationRepository = Depends(get_conversation_repository),
+):
+    try:
+        return await conv_repo.get_messages(session_id)
+    except SessionNotFoundError:
         raise HTTPException(
             status_code=404,
             detail="Session not found"
         )
-
-    return conversation_store.get_messages(session_id)
