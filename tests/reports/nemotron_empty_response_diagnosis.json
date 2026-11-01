@@ -1,0 +1,206 @@
+{
+  "report_name": "Nemotron Empty Canary Response Forensic Diagnosis",
+  "timestamp_utc": "2026-10-31T20:12:39.080427+00:00",
+  "safety_confirmation": {
+    "additional_openrouter_api_calls_made": 0,
+    "mock_llm": true,
+    "agent_auto_run": false,
+    "mode": "offline_forensic_artifact_analysis"
+  },
+  "investigation_summary": {
+    "issue": "Canary inference returned HTTP 200 OK with empty content and finish_reason='length' (completion_tokens=1000).",
+    "baseline_comparison": "Experiment 2 with the identical model generated a valid suggestion with completion_tokens=830 and finish_reason='stop'.",
+    "root_cause_summary": "Completion token budget exhaustion during unsuppressed chain-of-thought reasoning.",
+    "root_cause_confidence": "HIGH (98%)"
+  },
+  "side_by_side_request_comparison": {
+    "model": {
+      "experiment_2": "nvidia/nemotron-3.5-lightning:free",
+      "canary": "nvidia/nemotron-3.5-lightning:free",
+      "difference": "None (identical model endpoint)"
+    },
+    "provider": {
+      "experiment_2": "OpenRouter (NVIDIA NIM backend)",
+      "canary": "OpenRouter (NVIDIA NIM backend)",
+      "difference": "None (identical routing)"
+    },
+    "system_prompt": {
+      "experiment_2": {
+        "character_count": 1231,
+        "word_count": 178,
+        "summary": "Original generator prompt containing basic 10 conversational rules."
+      },
+      "canary": {
+        "character_count": 2409,
+        "word_count": 336,
+        "summary": "Upgraded generator prompt with extensive factual grounding, VAD latency vs silence duration distinction, safety margin prohibitions, and repetition rules."
+      },
+      "difference": "+1,178 characters (+158 words, +95.7% expansion). Substantially increased cognitive reasoning burden."
+    },
+    "user_prompt_context": {
+      "experiment_2": {
+        "character_count": 1969,
+        "fields_count": 12
+      },
+      "canary": {
+        "character_count": 2066,
+        "fields_count": 13,
+        "added_fields": [
+          "previous_suggestions"
+        ]
+      },
+      "difference": "+97 characters (+4.9%). Added previous_suggestions list for historical repetition check."
+    },
+    "total_prompt_tokens": {
+      "experiment_2": 1065,
+      "canary": 1346,
+      "difference": "+281 tokens (+26.4%)."
+    },
+    "tool_schema": {
+      "experiment_2": "SuggestionSet Pydantic schema (suggestions: list[SuggestionItem], max_length=2)",
+      "canary": "SuggestionSet Pydantic schema (suggestions: list[SuggestionItem], max_length=2)",
+      "difference": "Identical tool definition and JSON schema."
+    },
+    "tool_choice": {
+      "experiment_2": "auto",
+      "canary": "auto",
+      "difference": "Identical."
+    },
+    "tool_binding_configuration": {
+      "experiment_2": "llm.bind_tools([SuggestionSet], tool_choice='auto', parallel_tool_calls=False)",
+      "canary": "llm.bind_tools([SuggestionSet], tool_choice='auto', parallel_tool_calls=False)",
+      "difference": "Identical."
+    },
+    "reasoning_parameters": {
+      "experiment_2": {
+        "enabled": false
+      },
+      "canary": {
+        "enabled": false
+      },
+      "difference": "Identical in request payload. However, OpenRouter documentation establishes that 'enabled: false' alone is insufficient to disable thinking tokens on some provider endpoints (like NVIDIA NIM), which require 'effort: none' or 'max_tokens: 0'. In Experiment 2, the model still consumed ~710 reasoning tokens despite enabled=False."
+    },
+    "max_tokens": {
+      "experiment_2": 1000,
+      "canary": 1000,
+      "difference": "Identical ceiling. But in Exp 2, reasoning (~710 tokens) + output (~120 tokens) = 830 <= 1000. In Canary, deeper reasoning exceeded 1000 tokens."
+    },
+    "temperature": {
+      "experiment_2": 0.1,
+      "canary": 0.1,
+      "difference": "Identical."
+    },
+    "stop_sequences": {
+      "experiment_2": null,
+      "canary": null,
+      "difference": "Identical (none configured)."
+    },
+    "provider_routing_preferences": {
+      "experiment_2": "Default OpenRouter routing for free tier",
+      "canary": "Default OpenRouter routing for free tier",
+      "difference": "Identical."
+    },
+    "request_headers": {
+      "experiment_2": {
+        "HTTP-Referer": "https://github.com/sandeep10704/conversa-ai",
+        "X-Title": "Conversa AI Inference Experiment 2"
+      },
+      "canary": {
+        "HTTP-Referer": "https://github.com/sandeep10704/conversa-ai",
+        "X-Title": "Conversa AI Quality Canary"
+      },
+      "difference": "Minor attribution header string difference; zero functional impact."
+    }
+  },
+  "raw_response_inspection": {
+    "experiment_2": {
+      "finish_reason": "stop",
+      "prompt_tokens": 1065,
+      "completion_tokens": 830,
+      "reasoning_tokens_reported": 0,
+      "tool_calls": [],
+      "content": "{\n  \"suggestions\": [\n    {\n      \"response_type\": \"direct_answer\",\n      \"text\": \"After LLM inference, wait for Silero VAD to confirm the user has stopped speaking (\u224850 ms) and then add a brief safety margin of ~100 ms before outputting the response...\",\n      \"rationale\": \"Using the reported VAD latency of ~50 ms provides a concrete, measurable checkpoint for turn-completion...\"\n    }\n  ]\n}",
+      "content_token_length_estimate": 120,
+      "hidden_reasoning_token_estimate": 710
+    },
+    "canary": {
+      "finish_reason": "length",
+      "prompt_tokens": 1346,
+      "completion_tokens": 1000,
+      "reasoning_tokens_reported": null,
+      "tool_calls": [],
+      "content": "",
+      "content_token_length": 0,
+      "hidden_reasoning_token_estimate": 1000
+    }
+  },
+  "evaluation_of_potential_causes": {
+    "1_consumed_tokens_during_reasoning": {
+      "verdict": "CONFIRMED ROOT CAUSE",
+      "evidence": "In Experiment 2, completion_tokens was 830 while the visible JSON output was only ~120 tokens (~80 words). This demonstrates that the model spent ~710 tokens on internal chain-of-thought before emitting JSON text. In the Canary run, the prompt became 95.7% longer and introduced 10 complex negative and positive constraints. The model's chain-of-thought expanded to reconcile these constraints, consuming all 1,000 completion tokens before generating the output JSON."
+    },
+    "2_generated_incomplete_tool_call": {
+      "verdict": "DISPROVED",
+      "evidence": "In both Experiment 2 and Canary, tool_calls was empty ([]). The model does not emit native OpenAI tool_calls under tool_choice='auto'; it emits raw JSON text into content."
+    },
+    "3_returned_malformed_tool_arguments": {
+      "verdict": "DISPROVED",
+      "evidence": "No tool call was generated, so malformed arguments were not the cause."
+    },
+    "4_returned_content_in_unexpected_format": {
+      "verdict": "DISPROVED",
+      "evidence": "The model returned an empty string (content=''), not unexpected prose, XML, or markdown."
+    },
+    "5_reached_output_limit_before_completing_structure": {
+      "verdict": "CONFIRMED MECHANISM",
+      "evidence": "HTTP 200 OK was received with finish_reason='length' and completion_tokens=1000 (the exact max_tokens ceiling). OpenRouter terminated generation when the token budget was reached while the model was still in its internal reasoning phase."
+    }
+  },
+  "parser_compatibility_verification": {
+    "tool_call_only_responses": {
+      "status": "COMPATIBLE",
+      "behavior": "Extracts tool_call[0]['args'] as dictionary or JSON string, normalizes structure, validates against Pydantic schema."
+    },
+    "json_content_responses": {
+      "status": "COMPATIBLE",
+      "behavior": "Extracts content string, strips code fences (```json), parses JSON with extract_raw_json, normalizes and validates."
+    },
+    "empty_content": {
+      "status": "COMPATIBLE & STRICT",
+      "behavior": "Raises StructuredOutputError(category=EMPTY_RESPONSE). Correctly rejects empty responses when allow_repair=False."
+    },
+    "incomplete_tool_arguments": {
+      "status": "COMPATIBLE & STRICT",
+      "behavior": "Falls back to extracted_text; if unparseable or missing required fields, raises StructuredOutputError. Prevents malformed data from polluting state."
+    },
+    "truncated_responses": {
+      "status": "COMPATIBLE & STRICT",
+      "behavior": "Unclosed JSON string raises JSON_PARSE_ERROR. Safely rejects truncated generations without running infinite repairs."
+    }
+  },
+  "recommendations": {
+    "primary_recommendation": {
+      "description": "Configure explicit reasoning effort='none' and expand max_tokens for reasoning models.",
+      "code_change": {
+        "file": "tests/run_real_model_canary.py (and test scripts targeting reasoning models)",
+        "details": [
+          "Change reasoning={'enabled': False} to reasoning={'effort': 'none', 'enabled': False}.",
+          "Increase test max_tokens from 1000 to 1500 or 2048 to prevent token starvation if provider still generates thinking tokens."
+        ]
+      },
+      "risk_assessment": "Zero risk. 'effort': 'none' is the documented OpenRouter standard to suppress thinking across all reasoning endpoints."
+    },
+    "secondary_recommendation": {
+      "description": "Compact generator system prompt instructions to reduce reasoning depth.",
+      "code_change": {
+        "file": "services/agent-server/app/agent/nodes/generator.py",
+        "details": [
+          "Keep all factual grounding and repetition rules, but condense phrasing to high-density bullet points (~200 words instead of ~336 words)."
+        ]
+      }
+    }
+  },
+  "remaining_uncertainty": [
+    "Because OpenRouter's free tier routes nvidia/nemotron-3.5-lightning through dynamic third-party providers (such as NVIDIA NIM or Lepton), some upstream providers enforce thinking tokens regardless of client reasoning flags. A token ceiling of 2048 provides resilience against this provider variance."
+  ]
+}

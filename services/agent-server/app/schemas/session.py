@@ -1,9 +1,11 @@
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+from app.schemas.participant_context import ParticipantContext, UpdateParticipantContextRequest
 
 
 class ResponsePreferences(BaseModel):
@@ -46,6 +48,11 @@ class CreateSessionRequest(BaseModel):
         max_length=20
     )
 
+    participant_context: Optional[ParticipantContext] = Field(
+        default=None,
+        description="Optional session-specific participant profile (max 1500 cumulative chars)",
+    )
+
 
 class SessionResponse(BaseModel):
     session_id: UUID
@@ -57,3 +64,4 @@ class SessionResponse(BaseModel):
     communication_goals: list[str]
     response_preferences: ResponsePreferences
     constraints: list[str]
+    participant_context: Optional[ParticipantContext] = None

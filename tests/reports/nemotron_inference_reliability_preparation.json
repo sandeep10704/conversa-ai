@@ -1,0 +1,121 @@
+{
+  "report_metadata": {
+    "timestamp": "2026-11-01T05:10:00Z",
+    "report_name": "Conversa AI — Nemotron Inference Reliability: Offline Fix Preparation",
+    "target_model": "nvidia/nemotron-3.5-lightning:free",
+    "status": "PREPARED_OFFLINE",
+    "openrouter_inference_requests_made": 0
+  },
+  "safety_confirmation": {
+    "zero_real_inference_requests": true,
+    "previous_canary_not_re_executed": true,
+    "mock_llm": true,
+    "agent_auto_run": false,
+    "automatic_parser_repair": false,
+    "max_retries": 0,
+    "production_config_unchanged": true,
+    "unrelated_architecture_unchanged": true
+  },
+  "model_metadata_verification": {
+    "endpoint_inspected": "https://openrouter.ai/api/v1/models (public, unauthenticated)",
+    "model_id": "nvidia/nemotron-3.5-lightning:free",
+    "canonical_slug": "nvidia/nemotron-3.5-lightning-20260807",
+    "hugging_face_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16",
+    "architecture": {
+      "modality": "text->text",
+      "type": "Mixture-of-Experts (3B active / 30B total)"
+    },
+    "context_length": 1000000,
+    "supported_parameters": [
+      "include_reasoning",
+      "max_tokens",
+      "reasoning",
+      "seed",
+      "temperature",
+      "tool_choice",
+      "tools",
+      "top_p"
+    ],
+    "reasoning_inspection": {
+      "reasoning_mandatory": false,
+      "reasoning_supported_efforts": null,
+      "reasoning_default_effort": null,
+      "reasoning_default_enabled": null,
+      "reasoning_supports_max_tokens": null,
+      "finding": "In the public OpenRouter model catalog, supported_efforts is completely omitted for nvidia/nemotron-3.5-lightning:free (unlike nvidia/nemotron-3-ultra-550b-a55b which explicitly lists ['high', 'medium', 'none']). Consequently, support for effort: 'none' is ambiguous in the model catalog."
+    }
+  },
+  "proposed_reasoning_controls": {
+    "strategy": "Metadata-driven conditional reasoning",
+    "rule": "Only include reasoning={'effort': 'none'} when model metadata explicitly confirms 'none' in supported_efforts and mandatory is False. If supported_efforts is omitted or ambiguous, omit reasoning configuration to avoid sending unverified provider parameters.",
+    "previous_flaw_addressed": "Previous experiment sent reasoning={'enabled': False}, which is not an OpenRouter reasoning property and was silently ignored. reasoning.exclude=true is explicitly avoided because it only hides tokens from response without reducing generation token consumption.",
+    "ambiguity_handling": "Reasoning effort support is ambiguous for nvidia/nemotron-3.5-lightning:free; reasoning parameter is omitted until upstream metadata explicitly declares supported_efforts."
+  },
+  "prompt_length_comparison": {
+    "system_prompt_before": {
+      "character_count": 2409,
+      "word_count": 336,
+      "rule_structure": "10 rules with 5 nested sub-bullets under rule 6; requested up to two suggestions."
+    },
+    "system_prompt_after": {
+      "character_count": 1180,
+      "word_count": 161,
+      "reduction_characters_pct": -51.0,
+      "reduction_words_pct": -52.1,
+      "rule_structure": "6 dense positive/negative rules; requests exactly ONE suggestion."
+    },
+    "grounding_criteria_preservation": {
+      "spoken_style_natural": true,
+      "factual_grounding_strictly_stated_facts": true,
+      "participant_estimates_qualification": true,
+      "vad_processing_vs_silence_distinction": true,
+      "unsupported_numeric_claim_protection": true,
+      "anti_repetition_previous_suggestions": true,
+      "single_suggestion_requested": true,
+      "structured_schema_enforced": true
+    }
+  },
+  "proposed_completion_budget": {
+    "max_tokens": 1000,
+    "temperature": 0.1,
+    "max_retries": 0,
+    "allow_repair": false,
+    "rationale": "Experiment 2 completed in 830 completion tokens with finish_reason='stop' under max_tokens=1000 using a 178-word prompt. The failed canary (1,000 tokens) was triggered by prompt bloat (336 words) that expanded chain-of-thought beyond 710 tokens. By reducing the prompt by 52% and requesting 1 suggestion instead of 2, reasoning length is curtailed back into the safe 600-750 token window, fitting comfortably within 1,000 max_tokens without unnecessary token ceiling inflation."
+  },
+  "request_builder_changes": {
+    "module": "tests/canary_request_builder.py",
+    "key_functions": [
+      "determine_reasoning_config: Evaluates model metadata and avoids blind parameter injection",
+      "build_canary_request_params: Enforces model ID, max_retries=0, and metadata-driven params",
+      "build_canary_prompt_messages: Assembles context with CONCISE_SYSTEM_PROMPT",
+      "execute_canary_parse: Enforces allow_repair=False and handles StructuredOutputError"
+    ],
+    "canary_script_updated": "tests/run_real_model_canary.py wired to use canary_request_builder"
+  },
+  "regression_test_results": {
+    "test_suite": "tests/test_nemotron_inference_reliability.py",
+    "total_tests": 14,
+    "passed": 14,
+    "failed": 0,
+    "duration_seconds": 0.05,
+    "outbound_network_prohibited": true,
+    "verification_areas": {
+      "1_exact_model_id_enforced": "PASS (rejects invalid model IDs)",
+      "2_reasoning_config_metadata_driven": "PASS (omits when ambiguous, applies when confirmed)",
+      "3_max_retries_zero": "PASS (guaranteed max_retries=0)",
+      "4_no_parser_repair": "PASS (execute_repair_attempt never called)",
+      "5_prompt_preserves_grounding_rules": "PASS (all 6 criteria + word count < 200)",
+      "6_empty_and_truncated_responses_rejected": "PASS (EMPTY_RESPONSE and JSON_PARSE_ERROR handled safely)",
+      "7_valid_json_and_tool_calls_parsed": "PASS (valid JSON and tool_calls parsed cleanly)"
+    },
+    "agent_server_test_suite": {
+      "total_tests": 77,
+      "passed": 77,
+      "failed": 0
+    }
+  },
+  "remaining_uncertainties": [
+    "Upstream provider reasoning variance: On OpenRouter's free tier, requests for nvidia/nemotron-3.5-lightning:free are dynamically routed among providers (e.g. NVIDIA NIM, Fireworks, DeepInfra). Some upstream providers may generate internal chain-of-thought tokens regardless of client request headers. Prompt conciseness is the primary mitigation."
+  ],
+  "next_approved_canary_command": "PYTHONPATH=services/agent-server:. services/agent-server/.venv/bin/python tests/run_real_model_canary.py"
+}

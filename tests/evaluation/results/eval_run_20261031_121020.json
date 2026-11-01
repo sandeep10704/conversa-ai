@@ -1,0 +1,219 @@
+{
+  "run_id": "eval_run_20261031_121020",
+  "timestamp": "2026-10-31T12:12:05.156782Z",
+  "base_url": "http://localhost:8001",
+  "model_configured": "openrouter/free",
+  "model_resolved": "nvidia/nemotron-3-ultra-550b-a55b:free, poolside/laguna-xs-2.1:free",
+  "total_scenarios": 2,
+  "executions": [
+    {
+      "scenario_id": "pos_01_statement_no_question",
+      "scenario_category": "positive",
+      "scenario_type": "statement_without_question",
+      "expected_relevance": true,
+      "execution_status": "success",
+      "http_status_code": 200,
+      "session_id": "98c4c21a-3eeb-48fd-a3be-731cc9dbde8f",
+      "actual_relevance": true,
+      "relevance_decision_evaluated": true,
+      "relevance_confidence": 0.92,
+      "relevance_reason": "The discussion centers on a payment 504 incident and the user's objective is to clarify that connection pool exhaustion on the auth-proxy caused the downstream timeout chain. This goal has not yet been addressed in the conversation, giving the user a meaningful opportunity to contribute that specific point.",
+      "response_opportunity": "You can point out that connection pool exhaustion on the auth-proxy precipitated the downstream timeout chain.",
+      "detected_intent": "statement",
+      "current_topic": "Payment service 504 error incident",
+      "conversation_summary": "Payment service experiencing 504 errors around 14:15 UTC, with diagnostics pointing to an issue between edge ingress and payment core",
+      "understanding_result": {
+        "current_topic": "Payment service 504 error incident",
+        "conversation_summary": "Payment service experiencing 504 errors around 14:15 UTC, with diagnostics pointing to an issue between edge ingress and payment core",
+        "detected_intent": "statement"
+      },
+      "relevance_result": {
+        "should_suggest": true,
+        "confidence": 0.92,
+        "reason": "The discussion centers on a payment 504 incident and the user's objective is to clarify that connection pool exhaustion on the auth-proxy caused the downstream timeout chain. This goal has not yet been addressed in the conversation, giving the user a meaningful opportunity to contribute that specific point.",
+        "response_opportunity": "You can point out that connection pool exhaustion on the auth-proxy precipitated the downstream timeout chain."
+      },
+      "suggestions": [
+        {
+          "response_type": "supporting_point",
+          "text": "The auth-proxy connection pool hit saturation at 14:14 UTC \u2014 pool metrics show 100% utilization with acquisition timeouts spiking to 2.3s, which aligns exactly with the downstream 504 cascade.",
+          "rationale": "Directly ties the observed 504 errors to a measurable pool-exhaustion event on the auth-proxy, using concrete metrics (utilization, acquisition latency) without assigning blame.",
+          "follow_up_question": null
+        }
+      ],
+      "generated_suggestion_count": 1,
+      "validation_warnings": [],
+      "classification": "TP",
+      "failure_stage": null,
+      "exception_category": null,
+      "error_message": null,
+      "error_detail": null,
+      "selected_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "latency_ms": 67283.82,
+      "timestamp": "2026-10-31T12:11:27.564217Z",
+      "raw_response": {
+        "session_id": "98c4c21a-3eeb-48fd-a3be-731cc9dbde8f",
+        "status": "suggestions_ready",
+        "current_topic": "Payment service 504 error incident",
+        "conversation_summary": "Payment service experiencing 504 errors around 14:15 UTC, with diagnostics pointing to an issue between edge ingress and payment core",
+        "detected_intent": "statement",
+        "relevance_confidence": 0.92,
+        "relevance_reason": "The discussion centers on a payment 504 incident and the user's objective is to clarify that connection pool exhaustion on the auth-proxy caused the downstream timeout chain. This goal has not yet been addressed in the conversation, giving the user a meaningful opportunity to contribute that specific point.",
+        "suggestions": [
+          {
+            "response_type": "supporting_point",
+            "text": "The auth-proxy connection pool hit saturation at 14:14 UTC \u2014 pool metrics show 100% utilization with acquisition timeouts spiking to 2.3s, which aligns exactly with the downstream 504 cascade.",
+            "rationale": "Directly ties the observed 504 errors to a measurable pool-exhaustion event on the auth-proxy, using concrete metrics (utilization, acquisition latency) without assigning blame.",
+            "follow_up_question": null
+          }
+        ],
+        "validation_warnings": [],
+        "selected_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "stage_reached": "validator",
+        "should_suggest": true,
+        "response_opportunity": "You can point out that connection pool exhaustion on the auth-proxy precipitated the downstream timeout chain.",
+        "failure_stage": null,
+        "exception_category": null
+      }
+    },
+    {
+      "scenario_id": "neg_01_completely_unrelated",
+      "scenario_category": "negative",
+      "scenario_type": "completely_unrelated",
+      "expected_relevance": false,
+      "execution_status": "success",
+      "http_status_code": 200,
+      "session_id": "9e6f8ddf-5ee9-4fe5-bc1b-06b457a97c0b",
+      "actual_relevance": false,
+      "relevance_decision_evaluated": true,
+      "relevance_confidence": 0.0,
+      "relevance_reason": "",
+      "response_opportunity": "",
+      "detected_intent": "statement",
+      "current_topic": "Food trucks and lunch plans",
+      "conversation_summary": "Discussion about food trucks availability outside building 4 and planning a group lunch at 12:30 before the afternoon all-hands meeting, with an offer to book picnic tables outside.",
+      "understanding_result": {
+        "current_topic": "Food trucks and lunch plans",
+        "conversation_summary": "Discussion about food trucks availability outside building 4 and planning a group lunch at 12:30 before the afternoon all-hands meeting, with an offer to book picnic tables outside.",
+        "detected_intent": "statement"
+      },
+      "relevance_result": {
+        "should_suggest": false,
+        "confidence": 0.0,
+        "reason": "",
+        "response_opportunity": ""
+      },
+      "suggestions": [],
+      "generated_suggestion_count": 0,
+      "validation_warnings": [],
+      "classification": "TN",
+      "failure_stage": null,
+      "exception_category": null,
+      "error_message": null,
+      "error_detail": null,
+      "selected_model": "poolside/laguna-xs-2.1:free",
+      "latency_ms": 34587.86,
+      "timestamp": "2026-10-31T12:12:03.654408Z",
+      "raw_response": {
+        "session_id": "9e6f8ddf-5ee9-4fe5-bc1b-06b457a97c0b",
+        "status": "no_suggestion",
+        "current_topic": "Food trucks and lunch plans",
+        "conversation_summary": "Discussion about food trucks availability outside building 4 and planning a group lunch at 12:30 before the afternoon all-hands meeting, with an offer to book picnic tables outside.",
+        "detected_intent": "statement",
+        "relevance_confidence": 0.0,
+        "relevance_reason": "",
+        "suggestions": [],
+        "validation_warnings": [],
+        "selected_model": "poolside/laguna-xs-2.1:free",
+        "stage_reached": "relevance",
+        "should_suggest": false,
+        "response_opportunity": "",
+        "failure_stage": null,
+        "exception_category": null
+      }
+    }
+  ],
+  "metrics": {
+    "total_scenarios": 2,
+    "successful_executions": 2,
+    "failed_executions": 0,
+    "relevance": {
+      "total_relevance_evaluations": 2,
+      "tp": 1,
+      "fp": 0,
+      "tn": 1,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1_score": 1.0,
+      "false_positive_rate": 0.0,
+      "missed_opportunity_rate": 0.0
+    },
+    "generation": {
+      "positive_scenarios_evaluated": 1,
+      "positive_scenarios_with_suggestions": 1,
+      "positive_scenarios_relevant_but_no_suggestion": 0,
+      "suggestions_rejected_by_validation": 0,
+      "generation_failure_rate": 0.0,
+      "avg_suggestions_per_successful_positive": 1.0,
+      "total_suggestions_generated": 1
+    },
+    "infrastructure": {
+      "total_scenarios": 2,
+      "successful_executions": 2,
+      "failed_executions": 0,
+      "successful_execution_rate": 1.0,
+      "failed_execution_rate": 0.0,
+      "failure_rate_by_stage": {},
+      "failure_categories": {}
+    },
+    "usefulness": {
+      "total_suggestions_evaluated": 0,
+      "average_score": null,
+      "score_distribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0
+      },
+      "criteria_compliance": {
+        "conversation_relevance": 0.0,
+        "objective_alignment": 0.0,
+        "communication_goal_alignment": 0.0,
+        "practical_value": 0.0,
+        "natural_conversational_language": 0.0,
+        "conciseness": 0.0,
+        "non_repetition": 0.0
+      },
+      "pending_human_review": true
+    },
+    "factuality": {
+      "total_claims": 0,
+      "supported_claims": 0,
+      "unsupported_claims": 0,
+      "incorrect_claims": 0,
+      "not_applicable_claims": 0,
+      "total_verifiable_claims": 0,
+      "factual_accuracy": null,
+      "pending_human_review": true
+    },
+    "confusion_matrix": {
+      "tp": 1,
+      "fp": 0,
+      "tn": 1,
+      "fn": 0,
+      "errors": 0
+    },
+    "precision": 1.0,
+    "recall": 1.0,
+    "missed_opportunity_rate": 0.0,
+    "f1_score": 1.0,
+    "positive_total": 1,
+    "positive_successful": 1,
+    "positive_failed": 0,
+    "negative_total": 1,
+    "negative_successful": 1,
+    "negative_failed": 0
+  }
+}

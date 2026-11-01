@@ -1,0 +1,110 @@
+[
+  {
+    "review_id": "091b788f-73d0-49d3-b729-2a1572628f8e",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 0,
+    "claim_index": 0,
+    "claim_text": "The auth-proxy connection pool metrics show saturation at 14:15 UTC \u2014 active connections hit the max pool size (200), wait queue depth spiked to 1,200, and acquire latency jumped from 2ms to 4.8s.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Auth-proxy had a maximum pool limit of 100 concurrent HTTP/1.1 connections.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "cc245429-4cc4-4ffc-bfc1-57ff2b910038",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 0,
+    "claim_index": 1,
+    "claim_text": "That exhaustion propagated backpressure upstream, causing the edge ingress to time out waiting for auth-proxy responses, which then cascaded as 504s in the payment core.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "During the incident, auth-proxy active connections hit 100 with a wait queue exceeding 500 requests.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "f7a0133b-9052-4571-abf4-3d7ae55b246e",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 0,
+    "claim_index": 0,
+    "claim_text": "Raft uses randomized election timeouts precisely to avoid this.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Raft uses randomized election timeouts (typically between 150ms and 300ms) to ensure split votes are rare and quickly resolved.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "3102b065-fc06-4b8d-b776-a2024232276b",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 0,
+    "claim_index": 1,
+    "claim_text": "Even if three nodes timeout at the same moment and split their votes, no candidate reaches a majority, so the election fails for that term.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Raft uses randomized election timeouts (typically between 150ms and 300ms) to ensure split votes are rare and quickly resolved.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "2d2a7b5c-8be1-4f87-b170-a3e687975688",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 0,
+    "claim_index": 2,
+    "claim_text": "Everyone steps back to follower, increments the term, and picks a new random timeout.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Randomization spreads out election starts so usually a single follower times out, transitions to candidate, and wins the term before others timeout.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "e8e05c6a-c049-4ba5-804e-2389d6917127",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 0,
+    "claim_index": 3,
+    "claim_text": "Because the timeouts are randomized, the nodes won't wake up together again, so one candidate will eventually gather a majority and win.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Raft uses randomized election timeouts (typically between 150ms and 300ms) to ensure split votes are rare and quickly resolved.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "d55f5457-d240-4d8d-abe0-ef3b0c96c75e",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 0,
+    "claim_index": 4,
+    "claim_text": "There's no perpetual deadlock loop.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "45acb424-e933-40e8-9077-4ac737520c41",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 1,
+    "claim_index": 0,
+    "claim_text": "Think of it like this: a split vote isn't a permanent tie, it's just a failed election for that term.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Randomization spreads out election starts so usually a single follower times out, transitions to candidate, and wins the term before others timeout.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "9ba1a075-5d92-4278-889d-b3246bc5eaa6",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 1,
+    "claim_index": 1,
+    "claim_text": "The randomness ensures the next round starts at different times, so the cluster quickly moves past the tie.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Randomization spreads out election starts so usually a single follower times out, transitions to candidate, and wins the term before others timeout.",
+    "reviewer": null,
+    "reviewed_at": null
+  }
+]

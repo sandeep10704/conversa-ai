@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conversa AI — Live Microphone Client</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 16px;
+    }
+    header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    header .subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    /* Status Badges */
+    .status-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .status-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .status-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .status-val {
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      word-break: break-all;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #64748b;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .dot.green { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .dot.red { background: var(--danger); }
+    .dot.amber { background: var(--warning); box-shadow: 0 0 8px var(--warning); }
+
+    /* Control Panel */
+    .panel {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    button.primary {
+      background: var(--primary);
+      color: #0f172a;
+    }
+    button.primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+    button.success {
+      background: var(--success);
+      color: #0f172a;
+    }
+    button.danger {
+      background: var(--danger);
+      color: white;
+    }
+    button.secondary {
+      background: #334155;
+      color: var(--text);
+    }
+    button.secondary:hover:not(:disabled) {
+      background: #475569;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    input[type="text"] {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      width: 320px;
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    /* Audio Meter */
+    .meter-container {
+      flex: 1;
+      min-width: 180px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .meter-bar {
+      width: 100%;
+      height: 8px;
+      background: #0f172a;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .meter-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--success);
+      transition: width 0.05s linear;
+    }
+
+    /* Main Workspace */
+    .workspace {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 20px;
+    }
+    @media (max-width: 900px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text);
+    }
+    .badge-count {
+      font-size: 11px;
+      background: #334155;
+      color: var(--text-muted);
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    /* Live Partial Block */
+    .partial-box {
+      background: #0f172a;
+      border: 1px dashed #475569;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      min-height: 54px;
+      font-style: italic;
+      color: #7dd3fc;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+    }
+    .partial-box.active {
+      border-color: var(--primary);
+    }
+    .partial-box:empty::before {
+      content: "Listening for speech... (speak into microphone)";
+      color: #64748b;
+      font-style: normal;
+    }
+
+    /* Finalized Message List */
+    .messages-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 440px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .msg-card {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      animation: fadeIn 0.25s ease-out;
+    }
+    .msg-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .msg-seq {
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .msg-text {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    /* Suggestion Cards */
+    .suggestions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: 520px;
+      overflow-y: auto;
+    }
+    .sugg-card {
+      background: #172554;
+      border: 1px solid #1e40af;
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      animation: slideIn 0.3s ease-out;
+    }
+    .sugg-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+    }
+    .sugg-type {
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #60a5fa;
+      background: #1e3a8a;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .sugg-time {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+    .sugg-text {
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+      line-height: 1.4;
+    }
+    .sugg-rationale {
+      font-size: 12px;
+      color: #93c5fd;
+      border-left: 2px solid #3b82f6;
+      padding-left: 8px;
+      margin-top: 4px;
+    }
+    .empty-state {
+      padding: 30px 10px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* Logs / Diagnostic Console */
+    .logs-panel {
+      margin-top: 10px;
+      background: #020617;
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      color: #94a3b8;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .log-line {
+      margin-bottom: 2px;
+    }
+    .log-line.info { color: #38bdf8; }
+    .log-line.warn { color: #f59e0b; }
+    .log-line.error { color: #ef4444; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Conversa AI</h1>
+        <div class="subtitle">Live Microphone Audio Streaming & Real-Time Suggestion Client</div>
+      </div>
+      <div>
+        <button id="btnSecondSession" class="secondary" onclick="openSecondSessionViewer()">+ Open Isolation Session B</button>
+      </div>
+    </header>
+
+    <!-- Status Bar -->
+    <section class="status-bar">
+      <div class="status-card">
+        <span class="status-label">Active Session ID</span>
+        <span class="status-val" id="valSessionId">None</span>
+      </div>
+      <div class="status-card">
+        <span class="status-label">Audio Gateway (:8002)</span>
+        <span class="status-val">
+          <span class="dot" id="dotGateway"></span>
+          <span id="valGateway">Disconnected</span>
+        </span>
+      </div>
+      <div class="status-card">
+        <span class="status-label">Delivery Service (:8003)</span>
+        <span class="status-val">
+          <span class="dot" id="dotDelivery"></span>
+          <span id="valDelivery">Disconnected</span>
+        </span>
+      </div>
+      <div class="status-card">
+        <span class="status-label">Microphone Status</span>
+        <span class="status-val">
+          <span class="dot" id="dotMic"></span>
+          <span id="valMic">Inactive</span>
+        </span>
+      </div>
+    </section>
+
+    <!-- Session Preparation & Participant Profile (Optional) -->
+    <section class="panel" id="prepPanel">
+      <div class="section-title" style="margin-bottom: 8px;">
+        <span style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Session Preparation & Participant Profile (Optional)
+        </span>
+        <span id="prepCharCount" class="badge-count">0 / 1500 chars</span>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+        Before starting, optionally provide context about yourself. Conversa AI uses this to recognize when discussions are relevant to you and suggest grounded contributions.
+      </p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 14px;">
+        <div>
+          <label class="status-label" for="prepName">Preferred Name</label>
+          <input type="text" id="prepName" placeholder="e.g. Sandeep" style="width: 100%; margin-top: 4px;" oninput="updatePrepCharCount()" />
+        </div>
+        <div>
+          <label class="status-label" for="prepRole">Role / Title</label>
+          <input type="text" id="prepRole" placeholder="e.g. Backend Developer" style="width: 100%; margin-top: 4px;" oninput="updatePrepCharCount()" />
+        </div>
+        <div>
+          <label class="status-label" for="prepResponsibilities">Responsibilities</label>
+          <input type="text" id="prepResponsibilities" placeholder="e.g. Backend architecture, audio processing" style="width: 100%; margin-top: 4px;" oninput="updatePrepCharCount()" />
+        </div>
+        <div>
+          <label class="status-label" for="prepExpertise">Skills / Expertise Keywords (comma-separated)</label>
+          <input type="text" id="prepExpertise" placeholder="e.g. Java, PostgreSQL, Kafka, audio processing" style="width: 100%; margin-top: 4px;" oninput="updatePrepCharCount()" />
+        </div>
+        <div>
+          <label class="status-label" for="prepGoals">Session Goals</label>
+          <input type="text" id="prepGoals" placeholder="e.g. Contribute technical insights on latency and architecture" style="width: 100%; margin-top: 4px;" oninput="updatePrepCharCount()" />
+        </div>
+        <div>
+          <label class="status-label" for="prepConstraints">Things to Avoid / Constraints</label>
+          <input type="text" id="prepConstraints" placeholder="e.g. Avoid committing to deadlines without estimation" style="width: 100%; margin-top: 4px;" oninput="updatePrepCharCount()" />
+        </div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; gap: 8px;">
+          <button id="btnSaveContext" class="secondary" onclick="saveParticipantContext()" style="padding: 6px 14px; font-size: 12px;">
+            Update Active Session Context
+          </button>
+          <button id="btnClearContext" class="secondary" onclick="clearParticipantContextFields()" style="padding: 6px 14px; font-size: 12px;">
+            Clear Form
+          </button>
+        </div>
+        <div id="prepSavedBadge" style="display: none; font-size: 12px; color: var(--success); font-weight: 600;">
+          ✓ Profile Verified & Saved
+        </div>
+      </div>
+      <!-- Verified context summary card -->
+      <div id="verifiedContextCard" style="display: none; margin-top: 12px; padding: 12px 14px; background: #0f172a; border-radius: 6px; border-left: 3px solid var(--primary); font-size: 12px;">
+        <div style="font-weight: 600; color: var(--primary); margin-bottom: 4px;">Verified Participant Profile (Single-Operator Isolated):</div>
+        <div id="verifiedContextDetails" style="color: var(--text-muted); line-height: 1.5;"></div>
+      </div>
+    </section>
+
+    <!-- Controls -->
+    <section class="panel">
+      <div class="controls">
+        <button id="btnCreateSession" class="primary" onclick="createSession()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+          Start New Session
+        </button>
+
+        <input type="text" id="inputSessionId" placeholder="Or enter existing session UUID..." />
+        <button id="btnJoinSession" class="secondary" onclick="joinSession()">Connect Session</button>
+
+        <span style="border-left: 1px solid var(--card-border); height: 28px; margin: 0 4px;"></span>
+
+        <button id="btnStartMic" class="success" onclick="startMicrophone()" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          Start Microphone
+        </button>
+        <button id="btnStopMic" class="danger" onclick="stopMicrophone()" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="5" y="5" rx="2"/></svg>
+          Stop Microphone
+        </button>
+        <button id="btnRequestSuggestion" class="primary" onclick="requestSuggestion()" disabled style="background: #0284c7;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Request Suggestion
+        </button>
+        <button id="btnEndSession" class="danger" onclick="endSession()" disabled style="background: #991b1b;">
+          End Session
+        </button>
+
+        <div class="meter-container">
+          <span class="status-label" style="font-size: 10px;">Audio Level</span>
+          <div class="meter-bar">
+            <div id="meterFill" class="meter-fill"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Workspace -->
+    <section class="workspace">
+      <!-- Transcripts Column -->
+      <div class="panel">
+        <div class="section-title">
+          <span>Live Audio Transcript</span>
+          <span id="finalCountBadge" class="badge-count">0 finalized</span>
+        </div>
+
+        <div class="status-label" style="margin-bottom: 6px;">Live Partial Hypothesis</div>
+        <div id="partialBox" class="partial-box"></div>
+
+        <div class="section-title" style="margin-top: 18px;">
+          <span>Finalized Utterances</span>
+        </div>
+        <div id="messagesList" class="messages-list">
+          <div class="empty-state">No finalized utterances yet. Speak for > 250ms with natural pauses to see transcripts.</div>
+        </div>
+      </div>
+
+      <!-- Suggestions Column -->
+      <div class="panel">
+        <div class="section-title">
+          <span>Real-Time Agent Suggestions</span>
+          <span id="suggCountBadge" class="badge-count">0 suggestions</span>
+        </div>
+        <div id="suggestionsList" class="suggestions-list">
+          <div class="empty-state">No suggestions yet. Once 3 utterances are finalized and paused (2s debounce), suggestions appear here automatically.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Diagnostic Log Console -->
+    <section class="logs-panel" id="logConsole">
+      <div class="log-line info">[Init] Conversa AI client loaded. Ready to start session.</div>
+    </section>
+  </div>
+
+  <script>
+    // Configuration
+    const AGENT_API_HOST = window.location.hostname || "localhost";
+    const AGENT_API_URL = `http://${AGENT_API_HOST}:8001`;
+    const AUDIO_GATEWAY_WS_URL = `ws://${AGENT_API_HOST}:8002/ws/audio`;
+    const DELIVERY_WS_URL = `ws://${AGENT_API_HOST}:8003/ws/delivery`;
+
+    // Global State
+    let currentSessionId = null;
+    let audioContext = null;
+    let mediaStream = null;
+    let scriptProcessor = null;
+    let gatewayWs = null;
+    let deliveryWs = null;
+    let isRecording = false;
+    let deliveryPingInterval = null;
+
+    let finalizedCount = 0;
+    let suggestionsCount = 0;
+
+    // Logging helper
+    function log(msg, level = "info") {
+      const consoleEl = document.getElementById("logConsole");
+      const line = document.createElement("div");
+      line.className = `log-line ${level}`;
+      const now = new Date().toLocaleTimeString();
+      line.textContent = `[${now}] ${msg}`;
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    // Participant Context Management
+    function getParticipantContextFromForm() {
+      const name = document.getElementById("prepName").value.trim();
+      if (!name) return null;
+
+      const role = document.getElementById("prepRole").value.trim() || null;
+      const responsibilities = document.getElementById("prepResponsibilities").value.trim() || null;
+      const rawExpertise = document.getElementById("prepExpertise").value.trim();
+      const expertise_keywords = rawExpertise
+        ? rawExpertise.split(",").map(s => s.trim()).filter(Boolean)
+        : [];
+      const session_goals = document.getElementById("prepGoals").value.trim() || null;
+      const constraints = document.getElementById("prepConstraints").value.trim() || null;
+
+      return {
+        preferred_name: name,
+        role: role,
+        responsibilities: responsibilities,
+        expertise_keywords: expertise_keywords,
+        session_goals: session_goals,
+        constraints: constraints,
+      };
+    }
+
+    function calculateTotalContextChars(ctx) {
+      if (!ctx) return 0;
+      let total = (ctx.preferred_name || "").length;
+      if (ctx.role) total += ctx.role.length;
+      if (ctx.responsibilities) total += ctx.responsibilities.length;
+      if (ctx.session_goals) total += ctx.session_goals.length;
+      if (ctx.constraints) total += ctx.constraints.length;
+      if (ctx.expertise_keywords) {
+        total += ctx.expertise_keywords.reduce((acc, k) => acc + k.length, 0);
+      }
+      return total;
+    }
+
+    function updatePrepCharCount() {
+      const ctx = getParticipantContextFromForm();
+      const count = calculateTotalContextChars(ctx);
+      const countEl = document.getElementById("prepCharCount");
+      countEl.textContent = `${count} / 1500 chars`;
+      if (count > 1500) {
+        countEl.style.color = "var(--danger)";
+        countEl.style.fontWeight = "bold";
+      } else {
+        countEl.style.color = "var(--text-muted)";
+        countEl.style.fontWeight = "normal";
+      }
+    }
+
+    function displayVerifiedContext(ctx) {
+      const card = document.getElementById("verifiedContextCard");
+      const details = document.getElementById("verifiedContextDetails");
+      const badge = document.getElementById("prepSavedBadge");
+
+      if (!ctx || !ctx.preferred_name) {
+        card.style.display = "none";
+        badge.style.display = "none";
+        return;
+      }
+
+      let html = `<strong>Name:</strong> ${ctx.preferred_name}`;
+      if (ctx.role) html += ` &nbsp;|&nbsp; <strong>Role:</strong> ${ctx.role}`;
+      if (ctx.responsibilities) html += `<br><strong>Responsibilities:</strong> ${ctx.responsibilities}`;
+      if (ctx.expertise_keywords && ctx.expertise_keywords.length > 0) {
+        html += `<br><strong>Expertise:</strong> ${ctx.expertise_keywords.join(", ")}`;
+      }
+      if (ctx.session_goals) html += `<br><strong>Goals:</strong> ${ctx.session_goals}`;
+      if (ctx.constraints) html += `<br><strong>Constraints:</strong> ${ctx.constraints}`;
+
+      details.innerHTML = html;
+      card.style.display = "block";
+      badge.style.display = "inline-block";
+    }
+
+    async function clearParticipantContextFields() {
+      document.getElementById("prepName").value = "";
+      document.getElementById("prepRole").value = "";
+      document.getElementById("prepResponsibilities").value = "";
+      document.getElementById("prepExpertise").value = "";
+      document.getElementById("prepGoals").value = "";
+      document.getElementById("prepConstraints").value = "";
+      updatePrepCharCount();
+      displayVerifiedContext(null);
+      if (currentSessionId) {
+        try {
+          await fetch(`${AGENT_API_URL}/v1/sessions/${currentSessionId}/participant-context`, {
+            method: "DELETE"
+          });
+          log(`Participant context cleared from active session ${currentSessionId}`, "info");
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    async function endSession() {
+      if (!currentSessionId) return;
+      try {
+        if (isRecording) {
+          stopMicrophone();
+        }
+        log(`Ending session ${currentSessionId} and purging participant context...`, "info");
+        const resp = await fetch(`${AGENT_API_URL}/v1/sessions/${currentSessionId}/end`, {
+          method: "POST"
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          log(`✓ Session ended. Status: ${data.status}. Context purged from server.`, "info");
+          displayVerifiedContext(null);
+          document.getElementById("prepName").value = "";
+          document.getElementById("prepRole").value = "";
+          document.getElementById("prepResponsibilities").value = "";
+          document.getElementById("prepExpertise").value = "";
+          document.getElementById("prepGoals").value = "";
+          document.getElementById("prepConstraints").value = "";
+          updatePrepCharCount();
+          document.getElementById("valSessionId").textContent = `${currentSessionId} (Ended)`;
+          document.getElementById("btnStartMic").disabled = true;
+          document.getElementById("btnStopMic").disabled = true;
+          document.getElementById("btnRequestSuggestion").disabled = true;
+          document.getElementById("btnEndSession").disabled = true;
+        } else {
+          throw new Error(`API returned status ${resp.status}`);
+        }
+      } catch (err) {
+        log(`Failed to end session: ${err.message}`, "error");
+        alert(`Error ending session: ${err.message}`);
+      }
+    }
+
+    async function requestSuggestion() {
+      if (!currentSessionId) return;
+      try {
+        log(`Requesting agent suggestions for session ${currentSessionId}...`, "info");
+        const resp = await fetch(`${AGENT_API_URL}/v1/sessions/${currentSessionId}/suggest`, {
+          method: "POST"
+        });
+        if (!resp.ok) {
+          const errData = await resp.json().catch(() => ({}));
+          throw new Error(errData.detail?.message || `API error ${resp.status}`);
+        }
+        const data = await resp.json();
+        log(`✓ Agent run status: ${data.status} (should_suggest=${data.should_suggest})`, "info");
+        if (data.suggestions && data.suggestions.length > 0) {
+          data.suggestions.forEach(s => {
+            renderSuggestionCard({
+              suggestion_id: s.suggestion_id || 'manual-' + Date.now(),
+              response_type: s.response_type,
+              text: s.text,
+              rationale: s.rationale,
+              timestamp: new Date().toISOString()
+            });
+          });
+        } else {
+          log(`No suggestions generated: ${data.relevance_reason || 'Relevance threshold not met'}`, "info");
+        }
+      } catch (err) {
+        log(`Failed to request suggestion: ${err.message}`, "error");
+        alert(`Error: ${err.message}`);
+      }
+    }
+
+    async function saveParticipantContext() {
+      if (!currentSessionId) {
+        alert("Please create or join a session first to attach or update participant context.");
+        return;
+      }
+      const ctx = getParticipantContextFromForm();
+      if (!ctx) {
+        alert("Please enter at least a Preferred Name to save participant context.");
+        return;
+      }
+      const totalChars = calculateTotalContextChars(ctx);
+      if (totalChars > 1500) {
+        alert(`Cumulative character count (${totalChars}) exceeds 1500 limit.`);
+        return;
+      }
+
+      try {
+        log(`Updating participant context for session ${currentSessionId}...`, "info");
+        const resp = await fetch(`${AGENT_API_URL}/v1/sessions/${currentSessionId}/participant-context`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(ctx),
+        });
+        if (!resp.ok) {
+          throw new Error(`API returned status ${resp.status}`);
+        }
+        const updated = await resp.json();
+        displayVerifiedContext(updated.participant_context || ctx);
+        log("✓ Participant context updated and verified.", "info");
+      } catch (err) {
+        log(`Failed to update participant context: ${err.message}`, "error");
+        alert(`Error saving participant context: ${err.message}`);
+      }
+    }
+
+    // 1. Session Management
+    async function createSession() {
+      try {
+        log("Creating new session via Agent API...", "info");
+        const payload = {
+          situation: "Live microphone test session discussing conversation intelligence latency and suggestion delivery",
+          objective: "Capture live speech, produce real-time transcripts, and deliver conversational suggestions",
+          communication_goals: ["Verify live audio streaming", "Ensure low-latency suggestion delivery"],
+          response_preferences: { tone: "professional", detail_level: "concise" },
+          constraints: ["Keep response concise", "Do not interrupt user speaking flow"]
+        };
+
+        const participantContext = getParticipantContextFromForm();
+        if (participantContext) {
+          const totalChars = calculateTotalContextChars(participantContext);
+          if (totalChars > 1500) {
+            alert(`Participant profile exceeds 1500 characters (${totalChars} chars). Please shorten it.`);
+            return;
+          }
+          payload.participant_context = participantContext;
+        }
+
+        const resp = await fetch(`${AGENT_API_URL}/v1/sessions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+          throw new Error(`Agent API returned status ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        setSessionId(data.session_id);
+        displayVerifiedContext(data.participant_context);
+        log(`✓ Created Session: ${data.session_id}`, "info");
+      } catch (err) {
+        log(`Failed to create session: ${err.message}`, "error");
+        alert(`Error connecting to Agent API at ${AGENT_API_URL}: ${err.message}`);
+      }
+    }
+
+    async function joinSession() {
+      const input = document.getElementById("inputSessionId").value.trim();
+      if (!input) {
+        alert("Please enter a valid session UUID.");
+        return;
+      }
+      setSessionId(input);
+      try {
+        const resp = await fetch(`${AGENT_API_URL}/v1/sessions/${input}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          displayVerifiedContext(data.participant_context);
+          if (data.participant_context) {
+            document.getElementById("prepName").value = data.participant_context.preferred_name || "";
+            document.getElementById("prepRole").value = data.participant_context.role || "";
+            document.getElementById("prepResponsibilities").value = data.participant_context.responsibilities || "";
+            document.getElementById("prepExpertise").value = (data.participant_context.expertise_keywords || []).join(", ");
+            document.getElementById("prepGoals").value = data.participant_context.session_goals || "";
+            document.getElementById("prepConstraints").value = data.participant_context.constraints || "";
+            updatePrepCharCount();
+          }
+        }
+      } catch (e) {
+        log(`Could not fetch details for session ${input}: ${e.message}`, "warn");
+      }
+    }
+
+    function setSessionId(sid) {
+      currentSessionId = sid;
+      document.getElementById("valSessionId").textContent = sid;
+      document.getElementById("inputSessionId").value = sid;
+      document.getElementById("btnStartMic").disabled = false;
+      document.getElementById("btnRequestSuggestion").disabled = false;
+      document.getElementById("btnEndSession").disabled = false;
+
+      // Reset DOM state for the new session
+      finalizedCount = 0;
+      suggestionsCount = 0;
+      document.getElementById("finalCountBadge").textContent = "0 finalized";
+      document.getElementById("suggCountBadge").textContent = "0 suggestions";
+      document.getElementById("messagesList").innerHTML = '<div class="empty-state">No finalized utterances yet. Speak for > 250ms with natural pauses to see transcripts.</div>';
+      document.getElementById("suggestionsList").innerHTML = '<div class="empty-state">No suggestions yet. Once 3 utterances are finalized and paused (2s debounce), suggestions appear here automatically.</div>';
+      const pbox = document.getElementById("partialBox");
+      if (pbox) { pbox.textContent = ""; pbox.classList.remove("active"); }
+
+      // Disconnect previous delivery WS if open
+      if (deliveryWs) {
+        deliveryWs.close();
+      }
+      connectDeliveryWebSocket(sid);
+    }
+
+    // 2. Delivery Service WebSocket
+    function connectDeliveryWebSocket(sid) {
+      const url = `${DELIVERY_WS_URL}/${sid}`;
+      log(`Connecting to Delivery Service at ${url}...`, "info");
+      updateDot("dotDelivery", "amber", "Connecting...");
+
+      try {
+        deliveryWs = new WebSocket(url);
+
+        deliveryWs.onopen = () => {
+          log("✓ Connected to Delivery Service WebSocket", "info");
+          updateDot("dotDelivery", "green", "Connected");
+
+          // Keep-alive ping every 15s
+          if (deliveryPingInterval) clearInterval(deliveryPingInterval);
+          deliveryPingInterval = setInterval(() => {
+            if (deliveryWs && deliveryWs.readyState === WebSocket.OPEN) {
+              deliveryWs.send(JSON.stringify({ type: "ping" }));
+            }
+          }, 15000);
+        };
+
+        deliveryWs.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleDeliveryMessage(data);
+          } catch (e) {
+            log(`Failed to parse delivery message: ${e.message}`, "warn");
+          }
+        };
+
+        deliveryWs.onclose = () => {
+          log("Delivery Service WebSocket disconnected", "warn");
+          updateDot("dotDelivery", "red", "Disconnected");
+        };
+
+        deliveryWs.onerror = (err) => {
+          log(`Delivery Service WebSocket error`, "error");
+        };
+      } catch (err) {
+        log(`Error creating Delivery WebSocket: ${err.message}`, "error");
+      }
+    }
+
+    function handleDeliveryMessage(data) {
+      if (data.type === "partial") {
+        const box = document.getElementById("partialBox");
+        box.textContent = data.text;
+        box.classList.add("active");
+      } else if (data.type === "final") {
+        // Clear partial
+        const box = document.getElementById("partialBox");
+        box.textContent = "";
+        box.classList.remove("active");
+
+        addFinalizedMessage(data);
+      } else if (data.type === "suggestion") {
+        addSuggestion(data);
+      }
+    }
+
+    function addFinalizedMessage(msg) {
+      const seq = msg.sequence_number || finalizedCount + 1;
+      // Deduplicate finalized transcript by sequence number if already rendered
+      if (document.querySelector(`[data-msg-seq="${seq}"]`)) {
+        return;
+      }
+
+      finalizedCount++;
+      document.getElementById("finalCountBadge").textContent = `${finalizedCount} finalized`;
+
+      const list = document.getElementById("messagesList");
+      if (list.querySelector(".empty-state")) {
+        list.innerHTML = "";
+      }
+
+      const card = document.createElement("div");
+      card.className = "msg-card";
+      card.setAttribute("data-msg-seq", seq);
+      const timeStr = new Date().toLocaleTimeString();
+      card.innerHTML = `
+        <div class="msg-header">
+          <span class="msg-seq">Utterance #${seq}</span>
+          <span>${timeStr}</span>
+        </div>
+        <div class="msg-text">${escapeHtml(msg.text)}</div>
+      `;
+      list.appendChild(card);
+      list.scrollTop = list.scrollHeight;
+      log(`Final transcript #${seq}: "${msg.text}"`, "info");
+    }
+
+    function addSuggestion(sugg) {
+      // Deduplicate suggestions by suggestion_id
+      if (sugg.suggestion_id && document.querySelector(`[data-suggestion-id="${sugg.suggestion_id}"]`)) {
+        log(`[Deduplication] Suggestion ${sugg.suggestion_id} already displayed. Skipping duplicate.`, "debug");
+        return;
+      }
+
+      suggestionsCount++;
+      document.getElementById("suggCountBadge").textContent = `${suggestionsCount} suggestions`;
+
+      const list = document.getElementById("suggestionsList");
+      if (list.querySelector(".empty-state")) {
+        list.innerHTML = "";
+      }
+
+      const card = document.createElement("div");
+      card.className = "sugg-card";
+      if (sugg.suggestion_id) {
+        card.setAttribute("data-suggestion-id", sugg.suggestion_id);
+      }
+      const timeStr = new Date().toLocaleTimeString();
+      const milestoneText = sugg.source_sequence_number ? `Triggered at Utterance #${sugg.source_sequence_number}` : "";
+
+      card.innerHTML = `
+        <div class="sugg-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="sugg-type">${escapeHtml(sugg.response_type || "perspective")}</span>
+            ${milestoneText ? `<span style="font-size:11px;color:#93c5fd;font-weight:600;">${escapeHtml(milestoneText)}</span>` : ""}
+          </div>
+          <span class="sugg-time">${timeStr}</span>
+        </div>
+        <div class="sugg-text">${escapeHtml(sugg.text)}</div>
+        ${sugg.rationale ? `<div class="sugg-rationale">${escapeHtml(sugg.rationale)}</div>` : ""}
+      `;
+      list.insertBefore(card, list.firstChild);
+      log(`🎯 Received suggestion: "${sugg.text}" (id=${sugg.suggestion_id || 'n/a'})`, "info");
+    }
+
+    // 3. Audio Gateway & Microphone Capture
+    async function startMicrophone() {
+      if (!currentSessionId) {
+        alert("Please create or join a session first.");
+        return;
+      }
+
+      try {
+        log("Requesting microphone access...", "info");
+        updateDot("dotMic", "amber", "Requesting permission...");
+
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
+
+        // Connect to Audio Gateway WebSocket
+        const gatewayUrl = `${AUDIO_GATEWAY_WS_URL}/${currentSessionId}`;
+        log(`Connecting to Audio Gateway at ${gatewayUrl}...`, "info");
+        updateDot("dotGateway", "amber", "Connecting...");
+
+        gatewayWs = new WebSocket(gatewayUrl);
+        gatewayWs.binaryType = "arraybuffer";
+
+        gatewayWs.onopen = () => {
+          log("✓ Audio Gateway WebSocket connected", "info");
+          updateDot("dotGateway", "green", "Connected");
+        };
+
+        gatewayWs.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.status === "ready") {
+              log(`✓ Audio Gateway ready for session (contract: ${data.audio_contract?.format || 'pcm_s16le'})`, "info");
+              startAudioStreaming();
+            }
+          } catch (e) {}
+        };
+
+        gatewayWs.onclose = () => {
+          log("Audio Gateway disconnected", "warn");
+          updateDot("dotGateway", "red", "Disconnected");
+          if (isRecording) stopMicrophone();
+        };
+
+        gatewayWs.onerror = (err) => {
+          log("Audio Gateway WebSocket error", "error");
+        };
+
+      } catch (err) {
+        log(`Microphone permission error: ${err.message}`, "error");
+        updateDot("dotMic", "red", "Permission Denied");
+        alert(`Could not access microphone: ${err.message}`);
+      }
+    }
+
+    function startAudioStreaming() {
+      // Create Web Audio context
+      audioContext = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 16000
+      });
+
+      const inputRate = audioContext.sampleRate;
+      const targetRate = 16000;
+      log(`AudioContext active: native rate=${inputRate}Hz, target rate=${targetRate}Hz`, "info");
+
+      const source = audioContext.createMediaStreamSource(mediaStream);
+      // 2048 samples at 48k is ~42.6ms; downsampled to 16k is ~682 samples
+      const bufferSize = inputRate > 24000 ? 2048 : 1024;
+      scriptProcessor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+
+      scriptProcessor.onaudioprocess = (event) => {
+        if (!isRecording || !gatewayWs || gatewayWs.readyState !== WebSocket.OPEN) return;
+
+        const inputChannel = event.inputBuffer.getChannelData(0);
+
+        // Update visualizer meter
+        let sumSquares = 0;
+        for (let i = 0; i < inputChannel.length; i++) {
+          sumSquares += inputChannel[i] * inputChannel[i];
+        }
+        const rms = Math.sqrt(sumSquares / inputChannel.length);
+        const levelPct = Math.min(100, Math.round(rms * 400));
+        document.getElementById("meterFill").style.width = `${levelPct}%`;
+
+        // Resample/downsample to 16kHz
+        const downsampled = downsampleBuffer(inputChannel, inputRate, targetRate);
+
+        // Convert Float32 [-1.0, 1.0] to 16-bit Signed Little-Endian PCM
+        const pcm16Buffer = floatTo16BitPCM(downsampled);
+
+        // Send binary frame
+        gatewayWs.send(pcm16Buffer);
+      };
+
+      source.connect(scriptProcessor);
+      scriptProcessor.connect(audioContext.destination);
+
+      isRecording = true;
+      document.getElementById("btnStartMic").disabled = true;
+      document.getElementById("btnStopMic").disabled = false;
+      updateDot("dotMic", "green", "Active (Streaming)");
+      log("🎤 Live microphone streaming active. Speak clearly into the microphone.", "info");
+    }
+
+    function stopMicrophone() {
+      log("Stopping microphone streaming...", "info");
+      isRecording = false;
+
+      document.getElementById("meterFill").style.width = "0%";
+      document.getElementById("btnStartMic").disabled = false;
+      document.getElementById("btnStopMic").disabled = true;
+      updateDot("dotMic", "red", "Inactive");
+
+      if (gatewayWs && gatewayWs.readyState === WebSocket.OPEN) {
+        // Send stop message to trigger server-side VAD flush
+        try {
+          gatewayWs.send(JSON.stringify({ type: "stop" }));
+          gatewayWs.close();
+        } catch (e) {}
+      }
+
+      if (scriptProcessor) {
+        scriptProcessor.disconnect();
+        scriptProcessor = null;
+      }
+
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+
+      if (audioContext && audioContext.state !== "closed") {
+        audioContext.close();
+        audioContext = null;
+      }
+      log("Microphone streaming stopped.", "info");
+    }
+
+    // 4. Audio Processing Math Utilities
+    function downsampleBuffer(buffer, inputSampleRate, targetSampleRate) {
+      if (inputSampleRate === targetSampleRate) {
+        return buffer;
+      }
+      const sampleRateRatio = inputSampleRate / targetSampleRate;
+      const newLength = Math.round(buffer.length / sampleRateRatio);
+      const result = new Float32Array(newLength);
+      let offsetResult = 0;
+      let offsetBuffer = 0;
+      while (offsetResult < result.length) {
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+        let accum = 0;
+        let count = 0;
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+          accum += buffer[i];
+          count++;
+        }
+        result[offsetResult] = count > 0 ? (accum / count) : 0;
+        offsetResult++;
+        offsetBuffer = nextOffsetBuffer;
+      }
+      return result;
+    }
+
+    function floatTo16BitPCM(float32Array) {
+      const buffer = new ArrayBuffer(float32Array.length * 2);
+      const view = new DataView(buffer);
+      for (let i = 0; i < float32Array.length; i++) {
+        let s = Math.max(-1, Math.min(1, float32Array[i]));
+        view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true); // true = Little-Endian
+      }
+      return buffer;
+    }
+
+    // Helper UI functions
+    function updateDot(dotId, color, text) {
+      const dot = document.getElementById(dotId);
+      dot.className = `dot ${color}`;
+      const valEl = dot.nextElementSibling;
+      if (valEl) valEl.textContent = text;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function openSecondSessionViewer() {
+      // Opens a second browser window with ?isolation=true to verify multi-session isolation
+      window.open(window.location.pathname + "?isolation=true", "_blank", "width=800,height=700");
+    }
+
+    // Auto-init for isolation mode if URL contains ?isolation=true
+    window.addEventListener("DOMContentLoaded", () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("isolation") === "true") {
+        document.querySelector("header h1").textContent = "Conversa AI — Isolation Session B Viewer";
+        document.getElementById("btnSecondSession").style.display = "none";
+        log("Opened as Isolation Observer client.", "info");
+        // Automatically create a separate session B
+        createSession();
+      }
+    });
+  </script>
+</body>
+</html>

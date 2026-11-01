@@ -1,0 +1,50 @@
+[
+  {
+    "review_id": "11e91c80-ddb4-430e-85da-b32aec3254b8",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 0,
+    "claim_index": 0,
+    "claim_text": "Auth-proxy connection pool metrics show saturation at 14:14 UTC \u2014 active connections hit the 500\u2011limit, wait\u2011queue depth spiked to 1,200, and borrow latency jumped from 2\u202fms to 450\u202fms.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Auth-proxy had a maximum pool limit of 100 concurrent HTTP/1.1 connections.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "4ffeffce-d36b-4a29-99f3-70c4d65fac10",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 0,
+    "claim_index": 1,
+    "claim_text": "That exhaustion propagated back\u2011pressure to the edge, triggering the 504 cascade.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "ae664599-aab8-419a-8ab4-9a673254f530",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 1,
+    "claim_index": 0,
+    "claim_text": "Pool telemetry confirms the auth\u2011proxy ran out of connections at 14:14: max\u2011pool=500, borrowed=500, waiters\u22481.2k, avg borrow time 450\u202fms.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Auth-proxy had a maximum pool limit of 100 concurrent HTTP/1.1 connections.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "1044ec0b-812a-46c7-b3de-055d73b54cf2",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 1,
+    "claim_index": 1,
+    "claim_text": "The resulting queue\u2011backlog stalled requests before they reached the payment core.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "During the incident, auth-proxy active connections hit 100 with a wait queue exceeding 500 requests.",
+    "reviewer": null,
+    "reviewed_at": null
+  }
+]

@@ -25,11 +25,21 @@ async def lifespan(app: FastAPI):
     await dispose_engine()
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title="Conversa AI Agent Server",
     description="Independent conversation intelligence service",
     version="0.1.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(
@@ -88,3 +98,46 @@ async def readiness_check():
             "error": db_status
         }
     )
+
+
+@app.get("/health/metrics", tags=["Health"])
+async def metrics_endpoint():
+    """Observability endpoint reporting outbox, event streaming, and agent execution statistics."""
+    from app.database.models import AgentExecutionModel, ProcessedEventModel, SuggestionModel
+    from app.database.repository import OutboxRepository
+    from app.database.session import async_session_factory
+    from sqlalchemy import func, select
+
+    async with async_session_factory()() as session:
+        repo = OutboxRepository(session)
+        outbox_counts = await repo.get_counts()
+
+        proc_stmt = select(func.count(ProcessedEventModel.event_id))
+        proc_res = await session.execute(proc_stmt)
+        processed_count = proc_res.scalar_one()
+
+        exec_stmt = select(
+            AgentExecutionModel.execution_status,
+            func.count(AgentExecutionModel.execution_id),
+        ).group_by(AgentExecutionModel.execution_status)
+        exec_res = await session.execute(exec_stmt)
+        execution_counts = dict(exec_res.all())
+
+        sugg_stmt = select(func.count(SuggestionModel.suggestion_id))
+        sugg_res = await session.execute(sugg_stmt)
+        suggestion_count = sugg_res.scalar_one()
+
+    return {
+        "outbox": outbox_counts,
+        "processed_events": processed_count,
+        "agent_executions": {
+            "running": execution_counts.get("running", 0),
+            "completed": execution_counts.get("completed", 0),
+            "no_suggestion": execution_counts.get("no_suggestion", 0),
+            "failed": execution_counts.get("failed", 0),
+            "total": sum(execution_counts.values()),
+        },
+        "suggestions": {
+            "total": suggestion_count,
+        },
+    }

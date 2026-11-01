@@ -7,11 +7,15 @@ from app.agent.graph import get_agent_graph
 from app.core.conversation_store import get_conversation_repository
 from app.core.llm import LLMConfigurationError
 from app.core.parsing import StructuredOutputError
-from app.core.session_store import get_session_repository
+from app.core.session_store import (
+    get_session_repository,
+    get_suggestion_repository,
+)
 from app.database.repository import (
     ConversationRepository,
     SessionNotFoundError,
     SessionRepository,
+    SuggestionRepository,
 )
 from app.schemas.agent import AgentRunResponse, SuggestionItem
 
@@ -25,6 +29,7 @@ async def generate_suggestions(
     session_id: UUID,
     session_repo: SessionRepository = Depends(get_session_repository),
     conv_repo: ConversationRepository = Depends(get_conversation_repository),
+    sugg_repo: SuggestionRepository = Depends(get_suggestion_repository),
 ):
 
     # 1. Retrieve session from PostgreSQL
@@ -44,6 +49,11 @@ async def generate_suggestions(
             status_code=400, detail="No conversation messages available"
         )
 
+    # 2b. Retrieve previous suggestions from PostgreSQL for context & deduplication
+    try:
+        prev_suggestions = await sugg_repo.get_suggestions_for_session(session_id, limit=10)
+    except Exception:
+        prev_suggestions = []
 
     # 3. Construct initial agent state
     initial_state = {
@@ -53,9 +63,24 @@ async def generate_suggestions(
         "communication_goals": session.communication_goals,
         "response_preferences": session.response_preferences.model_dump(),
         "constraints": session.constraints,
+        "participant_context": (
+            session.participant_context.model_dump()
+            if session.participant_context is not None
+            else None
+        ),
         "messages": [
             message.model_dump(mode="json")
             for message in messages[-20:]
+        ],
+        "previous_suggestions": [
+            {
+                "suggestion_id": str(s.suggestion_id),
+                "response_type": s.response_type,
+                "suggestion_text": s.suggestion_text,
+                "text": s.suggestion_text,
+                "rationale": s.rationale,
+            }
+            for s in prev_suggestions
         ],
         "suggestions": [],
         "validation_warnings": [],
@@ -109,6 +134,24 @@ async def generate_suggestions(
         SuggestionItem.model_validate(item)
         for item in result.get("suggestions", [])
     ]
+
+    # Persist suggestions to PostgreSQL and outbox for Kafka delivery
+    if suggestions and result.get("status") != "no_suggestion":
+        last_seq = messages[-1].sequence_number if messages else 1
+        for s in suggestions:
+            try:
+                await sugg_repo.create_suggestion_atomic_with_outbox(
+                    session_id=session_id,
+                    execution_id=None,
+                    source_last_sequence_number=last_seq,
+                    response_type=s.response_type,
+                    suggestion_text=s.text,
+                    rationale=s.rationale,
+                    selected_model=result.get("selected_model"),
+                )
+                await sugg_repo.db.commit()
+            except Exception as e:
+                logger.warning("Could not persist suggestion in outbox: %s", e)
 
     return AgentRunResponse(
         session_id=str(session_id),

@@ -10,6 +10,7 @@ class AgentState(TypedDict, total=False):
     communication_goals: list[str]
     response_preferences: dict[str, Any]
     constraints: list[str]
+    participant_context: dict[str, Any] | None
 
     # Conversation input
     messages: list[dict[str, Any]]
@@ -34,6 +35,7 @@ class AgentState(TypedDict, total=False):
 
     # Generation
     suggestions: list[dict[str, Any]]
+    previous_suggestions: list[dict[str, Any]]
 
     # Validation & Status
     validation_warnings: list[str]

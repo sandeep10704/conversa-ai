@@ -1,5 +1,6 @@
 import json
 
+from app.agent.compact_context import select_compact_participant_context
 from app.agent.state import AgentState
 from app.core.llm import get_llm
 from app.core.parsing import parse_structured_output
@@ -20,6 +21,12 @@ Use:
 - Current discussion topic.
 - Response strategy.
 - Response preferences.
+- Participant context (if provided):
+  * role: Professional specialty to guide tone and technical perspective.
+  * responsibilities: Discussion areas the user owns in this session.
+  * expertise_keywords: Technical domains for grounded contributions.
+  * session_goals: What the user intends to contribute.
+  * constraints: Boundaries and topics the user must avoid.
 
 Generate at most two useful suggestions.
 
@@ -28,17 +35,32 @@ Suggestion 2: Alternative response, only when useful.
 
 Rules:
 
-1. Write naturally, as if the user is speaking.
-2. Follow the requested tone and response length.
-3. Never claim that a question was directed at the user.
-4. Never attribute statements to specific speakers.
-5. Do not invent things participants said.
-6. Avoid unsupported statistics and numerical claims.
-7. Do not invent agreements or commitments.
-8. Avoid repeating already discussed points.
-9. Clearly qualify uncertain information.
-10. If a response cannot be grounded in the available context,
-    return an empty suggestions list.
+1. Write naturally, as if the user is speaking aloud in a real meeting.
+2. Concise and easy to say aloud. Prefer one clear, substantive contribution per suggestion.
+3. Follow the requested tone and response length.
+4. Never claim that a question was directed at the user, and never attribute statements to specific speakers.
+5. Do not invent things participants said or agreements not made.
+6. Factual Grounding & Latency Concepts:
+   - Use only information supported by the conversation.
+   - Participant-reported figures (e.g., approximately 50 ms for Silero VAD, 180 ms for Whisper Tiny) are estimates/observations, NOT verified benchmarks.
+   - Strictly DO NOT confuse:
+     * VAD per-chunk processing latency
+     * Silence duration threshold used for speech-end detection
+     * Transcription/Whisper inference latency
+     * LLM inference latency
+     * Total end-to-end response latency
+   - DO NOT invent unmentioned timing thresholds (such as 100 ms, 300 ms), safety margins, performance benchmarks, architectural components, database metrics, or unmentioned system behavior.
+   - When a recommendation depends on missing measurements or parameters, recommend measuring, profiling, or calibrating instead of asserting an invented number.
+7. Avoid generic empty platitudes such as "consider reviewing metrics" or "monitor the pipeline". Provide concrete technical substance.
+8. Avoid unnecessary throat-clearing introductions (e.g., "I think that...", "As we know...").
+9. Repetition Prevention:
+   - Review previous_suggestions. Do not repeat an idea that has already been suggested or adequately covered.
+10. Participant Context & Grounding Rules:
+   - Ground suggestions in the user's role and expertise without ever fabricating personal experience, past projects, past employers, degrees, qualifications, or unstated responsibilities.
+   - Never say "In my experience at [Company]..." or "When I built...", unless explicitly mentioned in the conversation.
+   - Strictly adhere to participant constraints (e.g. if the user must avoid committing to deadlines, do not propose timeline commitments).
+   - If participant_context is missing or null, generate general suggestions based on the situation and communication goals.
+11. If a response cannot be grounded in the available context, return an empty suggestions list.
 
 Do not include hidden reasoning or internal analysis.
 Return only the structured suggestion fields in a valid JSON object matching the schema:
@@ -97,8 +119,28 @@ async def generator_node(state: AgentState):
             "response_plan"
         ),
 
+        "previous_suggestions": [
+            s.get("suggestion_text") or s.get("text", "")
+            for s in state.get("previous_suggestions", [])
+        ],
+
         "conversation": recent_conversation
     }
+
+    relevance_opportunity = ""
+    relevance_state = state.get("relevance")
+    if isinstance(relevance_state, dict):
+        relevance_opportunity = relevance_state.get("response_opportunity", "")
+
+    compact_context = select_compact_participant_context(
+        participant_context=state.get("participant_context"),
+        current_topic=state.get("current_topic"),
+        conversation_summary=state.get("conversation_summary"),
+        conversation_text=recent_conversation,
+        response_opportunity=relevance_opportunity,
+    )
+    if compact_context:
+        context["participant_context"] = compact_context
 
     llm = get_llm()
     prompt_messages = [

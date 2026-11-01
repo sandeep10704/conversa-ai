@@ -1,0 +1,42 @@
+[
+  {
+    "review_id": "354b492f-6dbd-44e7-af33-ba3c26b36000",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 0,
+    "suggestion_text": "Auth-proxy connection pool metrics show saturation at 14:14 UTC \u2014 active connections hit the 500\u2011limit, wait\u2011queue depth spiked to 1,200, and borrow latency jumped from 2\u202fms to 450\u202fms. That exhaustion propagated back\u2011pressure to the edge, triggering the 504 cascade.",
+    "response_type": "supporting_point",
+    "rationale": "Directly answers the unresolved stall question with pool\u2011level data, avoids blame, and stays concise.",
+    "score": null,
+    "relevance_to_conversation": null,
+    "alignment_with_objective": null,
+    "alignment_with_communication_goals": null,
+    "practical_value": null,
+    "natural_conversational_language": null,
+    "conciseness": null,
+    "non_repetition": null,
+    "notes": null,
+    "reviewer": null,
+    "reviewed_at": null,
+    "is_secondary_llm": false
+  },
+  {
+    "review_id": "0e4d3c40-3699-48ed-baff-68b086ffba8e",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 1,
+    "suggestion_text": "Pool telemetry confirms the auth\u2011proxy ran out of connections at 14:14: max\u2011pool=500, borrowed=500, waiters\u22481.2k, avg borrow time 450\u202fms. The resulting queue\u2011backlog stalled requests before they reached the payment core.",
+    "response_type": "supporting_point",
+    "rationale": "Alternative phrasing with the same metrics, slightly more granular for deeper technical audience.",
+    "score": null,
+    "relevance_to_conversation": null,
+    "alignment_with_objective": null,
+    "alignment_with_communication_goals": null,
+    "practical_value": null,
+    "natural_conversational_language": null,
+    "conciseness": null,
+    "non_repetition": null,
+    "notes": null,
+    "reviewer": null,
+    "reviewed_at": null,
+    "is_secondary_llm": false
+  }
+]

@@ -1,0 +1,146 @@
+{
+  "report_id": "focused_quality_grounding_eval_01",
+  "timestamp_utc": "2026-10-31T19:15:43.099052+00:00",
+  "openrouter_api_calls_made": 0,
+  "configuration": {
+    "MOCK_LLM": true,
+    "AGENT_AUTO_RUN": false,
+    "mode": "offline_deterministic_evaluation"
+  },
+  "summary": {
+    "total_scenarios": 6,
+    "passed_scenarios": 6,
+    "repetition_prevention_working": true,
+    "numeric_grounding_enforced": true,
+    "generic_platitudes_rejected": true,
+    "regression_test_passed": true
+  },
+  "scenarios": [
+    {
+      "scenario_id": 1,
+      "title": "Direct technical question with enough context",
+      "input_topic": "Outbox publisher latency",
+      "detected_intent": "question",
+      "should_suggest": true,
+      "status": "suggestions_ready",
+      "accepted_suggestions_count": 1,
+      "accepted_suggestions": [
+        "We can switch from periodic polling to PostgreSQL LISTEN/NOTIFY, triggering immediate notification upon commit without busy looping."
+      ],
+      "validation_warnings": [],
+      "grounding_passed": true,
+      "natural_flow": true,
+      "notes": "Direct, substantive recommendation answering latency question without invented metrics."
+    },
+    {
+      "scenario_id": 2,
+      "title": "Topic discussion with an unresolved engineering decision",
+      "input_topic": "Whisper model selection trade-off",
+      "detected_intent": "statement / opinion_request",
+      "should_suggest": true,
+      "status": "suggestions_ready",
+      "accepted_suggestions_count": 1,
+      "accepted_suggestions": [
+        "We should benchmark Whisper Base against our actual meeting audio to measure the exact latency trade-off before committing to the switch."
+      ],
+      "validation_warnings": [],
+      "grounding_passed": true,
+      "natural_flow": true,
+      "notes": "Suggests empirical benchmarking when parameters are unknown; does not require direct question."
+    },
+    {
+      "scenario_id": 3,
+      "title": "Completely unrelated conversation",
+      "input_topic": "Team lunch plans",
+      "detected_intent": "statement (social)",
+      "should_suggest": false,
+      "status": "no_suggestion",
+      "accepted_suggestions_count": 0,
+      "accepted_suggestions": [],
+      "validation_warnings": [],
+      "grounding_passed": true,
+      "natural_flow": true,
+      "notes": "Relevance router correctly detected unrelated chitchat and bypassed suggestion generation."
+    },
+    {
+      "scenario_id": 4,
+      "title": "All discussion goals already addressed",
+      "input_topic": "Kafka partition key assignment",
+      "detected_intent": "statement (resolved)",
+      "should_suggest": false,
+      "status": "no_suggestion",
+      "accepted_suggestions_count": 0,
+      "accepted_suggestions": [],
+      "validation_warnings": [],
+      "grounding_passed": true,
+      "natural_flow": true,
+      "notes": "All communication goals satisfied; no redundant suggestions produced."
+    },
+    {
+      "scenario_id": 5,
+      "title": "Previous suggestion repeated in a later model response",
+      "input_topic": "Audio gateway PCM format",
+      "detected_intent": "statement",
+      "should_suggest": true,
+      "status": "no_suggestion",
+      "accepted_suggestions_count": 0,
+      "accepted_suggestions": [],
+      "validation_warnings": [
+        "Repeated suggestion: underlying idea already addressed in previous suggestion (similarity: 0.44, overlap: 0.62)."
+      ],
+      "grounding_passed": true,
+      "repetition_prevented": true,
+      "jaccard_similarity": 0.444,
+      "containment_overlap": 0.615,
+      "notes": "Paraphrased idea detected and rejected via token containment overlap."
+    },
+    {
+      "scenario_id": 6,
+      "title": "Technical recommendation requiring measurements that are not available (Regression Test)",
+      "input_topic": "Response generation latency in live audio pipeline",
+      "detected_intent": "statement / discussion",
+      "should_suggest": true,
+      "flawed_output_rejected": true,
+      "flawed_warnings": [
+        "Unsupported numeric recommendation: ungrounded metric/threshold '270 ms' not present in conversation context.",
+        "Unsupported recommendation: proposes ungrounded safety margin without empirical calibration."
+      ],
+      "grounded_output_accepted": true,
+      "grounded_text": "The 50 ms VAD and 180 ms Whisper times are participant estimates. We should measure the end-of-speech silence detection threshold before fixing an LLM latency budget.",
+      "grounding_passed": true,
+      "notes": "Flawed response with invented numbers (270 ms, 100 ms) and safety margin rejected; grounded response recommending measurement accepted."
+    }
+  ],
+  "before_after_comparisons": [
+    {
+      "category": "Factual Grounding & Timing Recommendations",
+      "before_experiment_2": "Silero VAD's 50 ms and Whisper Tiny's 180 ms leave about 270 ms for the LLM; add a brief safety margin of ~100 ms to ensure smooth delivery.",
+      "before_issues": [
+        "Invented ungrounded 270 ms LLM budget assuming an unmentioned 500 ms SLA.",
+        "Invented ~100 ms safety margin with no empirical basis in conversation.",
+        "Treated participant estimates (50 ms VAD, 180 ms Whisper) as global benchmarks."
+      ],
+      "after_grounded": "The 50 ms VAD and 180 ms Whisper times are participant estimates. We should measure the end-of-speech silence detection threshold before fixing an LLM latency budget.",
+      "after_improvements": [
+        "Explicitly identifies numbers as participant estimates.",
+        "Recommends empirical calibration of silence detection threshold instead of inventing margins.",
+        "Passes deterministic validator with 0 warnings."
+      ]
+    },
+    {
+      "category": "Repetition Prevention",
+      "before": "Paraphrased suggestions on identical underlying ideas (e.g., 'enforce 16 kHz mono PCM' vs 'require 16 kHz mono PCM') both accepted because strings differed.",
+      "after": "Validator tokenizes content and measures Jaccard similarity and containment overlap (>0.50), rejecting redundant recommendations even with varied vocabulary."
+    },
+    {
+      "category": "Natural Delivery vs Generic Platitudes",
+      "before": "'Consider reviewing the asynchronous event pipeline latency metrics.' (empty platitude accepted).",
+      "after": "Deterministic regex and semantic checks reject boilerplate platitudes; requires actionable technical contribution."
+    }
+  ],
+  "remaining_limitations": [
+    "Heuristic token-containment overlap handles single-topic paraphrasing well, but deeply metaphorical synonyms without token overlap may require semantic embedding checks.",
+    "Numeric extraction allows conversational cardinal numbers (1, 2) and context-stated numbers; non-standard scientific notation would require regex expansion.",
+    "Offline validation uses deterministic test mocks; live model inference will still require the generator node prompt constraints to maintain high yield."
+  ]
+}

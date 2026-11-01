@@ -1,0 +1,906 @@
+"""Dataset generator and validator for Conversa AI 24 evaluation scenarios.
+
+Constructs 12 positive and 12 negative scenarios meeting all specifications
+and saves them to tests/evaluation/dataset.jsonl.
+"""
+
+import json
+from pathlib import Path
+import sys
+
+# Add repository root to path
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
+
+from tests.evaluation.schemas import Scenario
+
+SCENARIOS: list[dict] = [
+    # =========================================================================
+    # POSITIVE RELEVANCE SCENARIOS (12)
+    # =========================================================================
+    {
+        "scenario_id": "pos_01_statement_no_question",
+        "scenario_category": "positive",
+        "scenario_type": "statement_without_question",
+        "situation": "Post-incident review meeting analyzing a microservices payment latency spike during peak Black Friday traffic.",
+        "objective": "Clarify that connection pool exhaustion on the auth-proxy caused the downstream timeout chain.",
+        "communication_goals": [
+            "Point out that connection pool exhaustion on the auth-proxy precipitated the downstream timeout chain."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "concise",
+            "technical_level": "advanced"
+        },
+        "constraints": [
+            "Do not blame any individual engineer or team.",
+            "Keep technical explanation strictly grounded in pool metrics."
+        ],
+        "messages": [
+            "The payment service started returning 504 errors around 14:15 UTC.",
+            "Our database CPU and memory metrics on the primary replica were completely normal during that window.",
+            "Third-party payment gateways also reported 99.99% uptime with sub-100ms response times throughout the incident.",
+            "Network latency between AWS regions was stable at 12ms, so we can rule out an AWS backbone degradation.",
+            "It looks like requests just stalled somewhere between the edge ingress and the payment core."
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Interject to explain that connection pool starvation at the auth-proxy layer was the bottleneck holding up downstream requests.",
+        "expected_response_characteristics": {
+            "response_type": "technical_explanation",
+            "key_points": ["auth-proxy connection pool exhaustion", "threads blocked waiting for client connections", "not database or payment gateway"],
+            "tone": "objective and analytical"
+        },
+        "reference_facts": [
+            "Auth-proxy had a maximum pool limit of 100 concurrent HTTP/1.1 connections.",
+            "During the incident, auth-proxy active connections hit 100 with a wait queue exceeding 500 requests.",
+            "Payment gateway upstream reported 99.99% uptime and healthy response latencies."
+        ],
+        "expected_decision_explanation": "Although the team only shared observations and did not ask an explicit question, their discussion of the mystery bottleneck directly matches the user's objective to reveal connection pool exhaustion on the auth-proxy."
+    },
+    {
+        "scenario_id": "pos_02_uncovered_communication_goal",
+        "scenario_category": "positive",
+        "scenario_type": "uncovered_communication_goal",
+        "situation": "Core architecture sync evaluating distributed data consistency between relational databases and Apache Kafka.",
+        "objective": "Advocate adopting the transactional outbox pattern to eliminate dual-write inconsistencies.",
+        "communication_goals": [
+            "Propose adopting the transactional outbox pattern to prevent dual-write inconsistencies with Kafka."
+        ],
+        "response_preferences": {
+            "style": "professional",
+            "length": "concise",
+            "technical_level": "advanced"
+        },
+        "constraints": [
+            "Do not suggest two-phase commit (2PC) or distributed transactions.",
+            "Focus on reliable event publishing."
+        ],
+        "messages": [
+            "We are seeing occasional discrepancies where orders are committed in PostgreSQL but the corresponding Kafka event is missing.",
+            "The application code writes to PostgreSQL first and then invokes kafkaProducer.send().",
+            "When the network hiccups or the pod terminates between the database commit and the Kafka producer call, the message is permanently lost.",
+            "We considered wrapping the Kafka call in a retry loop, but if the process crashes mid-retry, the event still disappears."
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Introduce the transactional outbox pattern with Debezium or CDC polling to guarantee atomic local commits and reliable event emission.",
+        "expected_response_characteristics": {
+            "response_type": "technical_explanation",
+            "key_points": ["transactional outbox pattern", "atomically persist event to outbox table within same DB transaction", "CDC or polling publisher to Kafka"],
+            "tone": "constructive and authoritative"
+        },
+        "reference_facts": [
+            "Dual-writes across heterogeneous storage engines (PostgreSQL and Kafka) cannot guarantee atomicity without an outbox or distributed transaction.",
+            "The transactional outbox pattern writes events to an outbox table in the same database transaction as business data."
+        ],
+        "expected_decision_explanation": "The team has highlighted the exact dual-write vulnerability that the user's communication goal addresses, and the transactional outbox pattern has not yet been introduced."
+    },
+    {
+        "scenario_id": "pos_03_concept_explanation",
+        "scenario_category": "positive",
+        "scenario_type": "concept_explanation",
+        "situation": "Engineering study group on consensus protocols preparing for a distributed metadata store redesign.",
+        "objective": "Explain how Raft prevents split-vote deadlocks during leader election.",
+        "communication_goals": [
+            "Explain how Raft uses randomized election timeouts to prevent and resolve split-vote ties."
+        ],
+        "response_preferences": {
+            "style": "natural",
+            "length": "concise",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Keep the explanation intuitive without getting bogged down in term number proofs."
+        ],
+        "messages": [
+            "We understand that in Raft, when a follower node misses heartbeats from the leader, it transitions to candidate state.",
+            "The candidate increments its current term, votes for itself, and requests votes from peers.",
+            "What is still confusing is what happens if three nodes in a five-node cluster all timeout at the exact same millisecond.",
+            "Won't they vote for themselves, split the remaining votes, and end up in a perpetual deadlock loop?"
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Explain the role of randomized election timeouts (e.g. 150-300ms) in breaking symmetry so one node times out first and wins a majority.",
+        "expected_response_characteristics": {
+            "response_type": "technical_explanation",
+            "key_points": ["randomized election timeouts (e.g., 150ms-300ms)", "breaks symmetry between candidates", "one candidate times out and collects majority before peers"],
+            "tone": "clear and educational"
+        },
+        "reference_facts": [
+            "Raft uses randomized election timeouts (typically between 150ms and 300ms) to ensure split votes are rare and quickly resolved.",
+            "Randomization spreads out election starts so usually a single follower times out, transitions to candidate, and wins the term before others timeout."
+        ],
+        "expected_decision_explanation": "The group directly raised an explicit conceptual confusion regarding Raft split votes, providing an ideal opening for the user to explain randomized election timeouts."
+    },
+    {
+        "scenario_id": "pos_04_practical_example",
+        "scenario_category": "positive",
+        "scenario_type": "practical_example",
+        "situation": "Platform team workshop on implementing zero-downtime database schema migrations.",
+        "objective": "Share a concrete 3-step expand-and-contract example for renaming a column in a high-traffic table.",
+        "communication_goals": [
+            "Provide a concrete three-step example of the expand-and-contract pattern for column renames."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "detailed",
+            "technical_level": "advanced"
+        },
+        "constraints": [
+            "Ensure the example emphasizes backward compatibility for rolling deployments."
+        ],
+        "messages": [
+            "We all agree in principle that we must avoid locking tables or breaking running application instances during schema updates.",
+            "Adding a nullable column is straightforward and safe.",
+            "Renaming an existing column like customer_email to email_address is where everyone gets nervous.",
+            "If you execute ALTER TABLE RENAME COLUMN while older application versions are still running in production, those instances immediately crash on INSERT or SELECT.",
+            "Has anyone actually executed this cleanly in a real production environment without maintenance windows?"
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Provide a concrete three-step expand-and-contract workflow: 1) Add new column with dual-write, 2) Backfill historical data and switch reads, 3) Remove old column.",
+        "expected_response_characteristics": {
+            "response_type": "example",
+            "key_points": ["Phase 1: Expand (add email_address, dual write to both)", "Phase 2: Backfill historical rows and shift reads to new column", "Phase 3: Contract (stop writing to old column, drop customer_email)"],
+            "tone": "practical and experience-based"
+        },
+        "reference_facts": [
+            "Expand-and-contract (parallel change) pattern decouples database migration from application deployment.",
+            "Immediate column renames break rolling deployments because old running pods query the pre-rename column identifier."
+        ],
+        "expected_decision_explanation": "The discussion expresses real apprehension about renaming columns safely and asks for practical experience, which directly invites the user's expand-and-contract example."
+    },
+    {
+        "scenario_id": "pos_05_constructive_disagreement",
+        "scenario_category": "positive",
+        "scenario_type": "constructive_disagreement",
+        "situation": "System design review for a real-time collaborative document editing application.",
+        "objective": "Respectfully challenge short-interval HTTP polling for collaborative cursor synchronization and propose WebSockets.",
+        "communication_goals": [
+            "Advise against client polling at 200ms intervals due to server connection overhead and latency, advocating for WebSockets."
+        ],
+        "response_preferences": {
+            "style": "professional",
+            "length": "concise",
+            "technical_level": "advanced"
+        },
+        "constraints": [
+            "Be constructive and courteous while pointing out the operational pitfalls of polling."
+        ],
+        "messages": [
+            "For showing live user cursor positions in the document, we want something simple to ship fast.",
+            "I suggest we just have each active browser client send an HTTP GET or POST every 200 milliseconds to sync cursor coordinates.",
+            "HTTP is stateless, uses standard REST endpoints, and avoids managing stateful socket infrastructure.",
+            "With 50 users in a document, that is only a few requests per second, so our current ALB setup should handle it easily."
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Politely disagree with 200ms polling by showing request amplification (50 users = 250 req/sec per doc) and recommending persistent WebSockets for low-latency bidirectional streaming.",
+        "expected_response_characteristics": {
+            "response_type": "polite_disagreement",
+            "key_points": ["200ms polling creates 250 HTTP requests/second for a single 50-user doc", "HTTP header overhead and TLS renegotiation saturate load balancers", "WebSockets or Server-Sent Events provide single persistent TCP connection with negligible framing overhead"],
+            "tone": "diplomatic, reasoned, and data-driven"
+        },
+        "reference_facts": [
+            "50 concurrent clients polling every 200ms generates 250 HTTP requests per second for a single active document session.",
+            "WebSockets maintain a single full-duplex TCP connection per client with lightweight 2-to-10 byte framing overhead."
+        ],
+        "expected_decision_explanation": "A proposal for 200ms HTTP polling was put on the table with flawed scalability assumptions, creating an urgent need for constructive disagreement."
+    },
+    {
+        "scenario_id": "pos_06_clarification_request",
+        "scenario_category": "positive",
+        "scenario_type": "clarification_request",
+        "situation": "Product release planning meeting discussing progressive feature rollout strategies for a B2B SaaS platform.",
+        "objective": "Clarify whether the 10% canary traffic rollout will hash on user ID or organization tenant ID.",
+        "communication_goals": [
+            "Ask whether the 10% canary threshold evaluates at the user level or tenant level to prevent split-tenant experiences."
+        ],
+        "response_preferences": {
+            "style": "natural",
+            "length": "short",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Ask concisely without derailing the meeting flow."
+        ],
+        "messages": [
+            "We are planning to roll out the updated billing workflows gradually next Monday.",
+            "Our feature flag provider will be configured to route 10% of traffic to the new interface on day one.",
+            "If error rates remain below 0.1%, we will bump that to 25% on Wednesday and 100% by the end of the sprint.",
+            "Telemetry dashboards will monitor checkout completion rates across both cohorts."
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Ask for clarification on whether the canary percentage is partitioned by user_id or organization_id to avoid colleagues within the same tenant seeing conflicting billing screens.",
+        "expected_response_characteristics": {
+            "response_type": "follow_up_question",
+            "key_points": ["hashing by user vs organization tenant", "avoiding inconsistent experience within the same account"],
+            "tone": "inquisitive and practical"
+        },
+        "reference_facts": [
+            "In B2B SaaS platforms, user-level hashing can cause two users within the same customer organization to see divergent feature states.",
+            "Tenant-level feature hashing guarantees that all users belonging to an organization experience the same version simultaneously."
+        ],
+        "expected_decision_explanation": "The rollout plan omits an essential architectural detail (hashing granularity) that directly affects B2B enterprise users, warranting a clarification question."
+    },
+    {
+        "scenario_id": "pos_07_follow_up_discussion",
+        "scenario_category": "positive",
+        "scenario_type": "related_follow_up",
+        "situation": "DevOps retrospective following a migration from standalone Redis to AWS ElastiCache Redis Cluster mode.",
+        "objective": "Follow up on multi-key commands and advise developers to use Redis hash tags to prevent cross-slot errors.",
+        "communication_goals": [
+            "Highlight that multi-key MGET/MSET commands must use Redis hash tags `{...}` to ensure keys map to the same hash slot."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "concise",
+            "technical_level": "advanced"
+        },
+        "constraints": [
+            "Acknowledge the migration success before raising the hash tag detail."
+        ],
+        "messages": [
+            "The cluster migration completed cleanly with zero downtime over the weekend.",
+            "Memory utilization is nicely distributed across all six primary shards, and replication lag is under 1 millisecond.",
+            "Basic key-value GET and SET operations have had zero errors since cutover.",
+            "Are there any residual edge cases in the application code we should review before we declare the migration 100% complete?"
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Remind the team that multi-key operations (like MGET, MSET, or transactions) across different keys will throw CROSSSLOT errors unless keys share hash tags.",
+        "expected_response_characteristics": {
+            "response_type": "supporting_point",
+            "key_points": ["Redis Cluster sharding uses 16384 hash slots", "multi-key commands fail with CROSSSLOT Keys if keys hash to different slots", "use Redis hash tags like {user123}:profile and {user123}:prefs"],
+            "tone": "proactive and helpful"
+        },
+        "reference_facts": [
+            "Redis Cluster partitions keys across 16384 hash slots.",
+            "Multi-key commands (MGET, MSET, Lua scripts, transactions) require all keys to hash to the exact same hash slot, otherwise throwing a CROSSSLOT error.",
+            "Hash tags `{...}` force Redis to only hash the string inside the curly braces."
+        ],
+        "expected_decision_explanation": "The team explicitly asked whether there are residual edge cases in the application code following the cluster cutover, directly inviting this follow-up warning."
+    },
+    {
+        "scenario_id": "pos_08_objective_not_addressed",
+        "scenario_category": "positive",
+        "scenario_type": "objective_not_addressed",
+        "situation": "Security review meeting for a newly developed public-facing partner API.",
+        "objective": "Introduce rate limiting and token bucket throttling at the API gateway layer before launch.",
+        "communication_goals": [
+            "Introduce token bucket rate limiting at the API gateway level before public launch."
+        ],
+        "response_preferences": {
+            "style": "professional",
+            "length": "concise",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Ground recommendation in API gateway capabilities."
+        ],
+        "messages": [
+            "We have verified that all public endpoints mandate TLS 1.3.",
+            "OAuth 2.0 client credential verification and JWT token signature checks are fully tested.",
+            "Input payloads are strictly validated against JSON schema definitions with strict type enforcement.",
+            "Database connections are parameterized to prevent SQL injection vulnerabilities.",
+            "What other essential edge protections should we check off our security checklist before opening up partner access?"
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Introduce API gateway rate limiting using token bucket algorithms to protect against denial-of-wallet and volumetric request floods.",
+        "expected_response_characteristics": {
+            "response_type": "direct_answer",
+            "key_points": ["API gateway rate limiting", "token bucket algorithm per client/API key", "protection against brute force and resource exhaustion"],
+            "tone": "confident and authoritative"
+        },
+        "reference_facts": [
+            "Rate limiting at the edge API gateway drops abusive traffic before it consumes downstream application compute or database capacity.",
+            "The token bucket algorithm allows short bursts while enforcing an average rate limit over time."
+        ],
+        "expected_decision_explanation": "The security team asked what edge protections remain on the checklist, and edge rate limiting has not yet been addressed."
+    },
+    {
+        "scenario_id": "pos_09_additional_technical_perspective",
+        "scenario_category": "positive",
+        "scenario_type": "additional_technical_perspective",
+        "situation": "Cloud infrastructure cost optimization review discussing data retention policies.",
+        "objective": "Point out that glacier storage retrieval fees and lifecycle transition costs can negate storage savings.",
+        "communication_goals": [
+            "Point out that glacier storage retrieval and inter-region egress fees can exceed storage savings if batch jobs access archived data frequently."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "concise",
+            "technical_level": "advanced"
+        },
+        "constraints": [
+            "Do not dismiss Glacier outright; highlight access patterns."
+        ],
+        "messages": [
+            "We have about 80 Terabytes of raw telemetry logs sitting in Amazon S3 Standard.",
+            "S3 Standard costs us around $1,800 a month just for storage.",
+            "If we set a lifecycle policy to move everything older than 30 days into S3 Glacier Deep Archive, the storage cost drops to under $80 a month.",
+            "That is an immediate 95% cost reduction on paper, which finance will love."
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Add the perspective of data retrieval fees, minimum retention periods (180 days for Deep Archive), and access patterns for quarterly auditing or data re-training.",
+        "expected_response_characteristics": {
+            "response_type": "supporting_point",
+            "key_points": ["Glacier Deep Archive retrieval costs and latency (12-48 hours)", "minimum storage duration charge (180 days)", "if downstream analytics or audits need random queries, retrieval fees exceed storage savings"],
+            "tone": "nuanced and pragmatic"
+        },
+        "reference_facts": [
+            "S3 Glacier Deep Archive has a minimum billing duration of 180 days per object.",
+            "Retrieving data from Glacier Deep Archive incurs per-GB retrieval fees and per-1,000 request charges in addition to multi-hour restore delays."
+        ],
+        "expected_decision_explanation": "The conversation is only evaluating nominal storage costs without considering retrieval fees or operational access patterns, giving the user a valuable opportunity to provide an additional technical perspective."
+    },
+    {
+        "scenario_id": "pos_10_latest_message_not_question",
+        "scenario_category": "positive",
+        "scenario_type": "latest_message_statement",
+        "situation": "Mobile app performance task force investigating memory crashes on lower-end Android devices.",
+        "objective": "Recommend client-side bitmap downsampling and Glide memory caching to eliminate OOM errors.",
+        "communication_goals": [
+            "Recommend client-side bitmap downsampling and Glide memory caching to eliminate OOM errors."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "concise",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Focus on the Android image rendering pipeline."
+        ],
+        "messages": [
+            "The release build shows a 4% crash rate on Android devices with 3GB or less of RAM.",
+            "Firebase Crashlytics traces point to OutOfMemoryError inside the RecyclerView image feed.",
+            "The backend delivers raw 4K marketing image assets directly through the CDN.",
+            "The telemetry confirms memory spikes immediately to 512MB heap capacity as soon as users scroll past the first three cards."
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Suggest decoding bitmaps to match exact target view dimensions and configuring Glide or Coil for aggressive memory pool caching.",
+        "expected_response_characteristics": {
+            "response_type": "supporting_point",
+            "key_points": ["subsampling/downsampling 4K images to device view dimensions", "avoid allocating full uncompressed 3840x2160 ARGB_8888 bitmap in heap", "leveraging Glide/Coil automatic resizing and memory cache"],
+            "tone": "solution-oriented and practical"
+        },
+        "reference_facts": [
+            "A 4K image decoded at ARGB_8888 occupies approximately 33MB of uncompressed bitmap memory in RAM regardless of view size.",
+            "Android image loaders like Glide automatically subsample bitmaps to target ImageView pixel dimensions to prevent OOM errors."
+        ],
+        "expected_decision_explanation": "Although the latest message is an analytical statement about memory spikes rather than a question, the user's objective provides the exact remedy for the diagnosed root cause."
+    },
+    {
+        "scenario_id": "pos_11_contribute_without_repetition",
+        "scenario_category": "positive",
+        "scenario_type": "contribute_without_repetition",
+        "situation": "Site reliability engineering retrospective on an Elasticsearch cluster outage.",
+        "objective": "Highlight that unthrottled concurrent snapshotting saturated disk I/O and heap memory during peak indexing.",
+        "communication_goals": [
+            "Highlight the snapshot concurrent stream throttle setting to prevent snapshotting from saturating cluster network and heap."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "concise",
+            "technical_level": "advanced"
+        },
+        "constraints": [
+            "Do not repeat the already discussed points about bulk index size and garbage collection."
+        ],
+        "messages": [
+            "We already confirmed that the bulk indexing batch size was too high at 50MB per request.",
+            "We also saw JVM garbage collection pauses spike to 14 seconds on the data nodes.",
+            "We have already agreed to reduce bulk payload batches to 10MB and tune the G1GC regions.",
+            "Yet even with those factors, the sudden I/O queue spike at 02:00 UTC still seems out of proportion to ingestion traffic alone."
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Point out the 02:00 UTC scheduled repository snapshot and recommend configuring `max_snapshot_bytes_per_sec` to throttle backup bandwidth.",
+        "expected_response_characteristics": {
+            "response_type": "supporting_point",
+            "key_points": ["unthrottled snapshot operations at 02:00 UTC", "max_snapshot_bytes_per_sec default setting saturates node disk and network I/O", "throttle snapshot streams during peak indexing"],
+            "tone": "incisive and constructive"
+        },
+        "reference_facts": [
+            "Elasticsearch snapshots can saturate disk throughput and JVM memory if `max_snapshot_bytes_per_sec` is unthrottled or set too high.",
+            "The cluster snapshot repository was scheduled to initiate daily snapshots at 02:00 UTC."
+        ],
+        "expected_decision_explanation": "The team recognized that known factors did not fully explain the 02:00 UTC I/O spike, creating an opportunity to introduce snapshot throttling without repeating known GC and batch size conclusions."
+    },
+    {
+        "scenario_id": "pos_12_multi_message_evolving_topic",
+        "scenario_category": "positive",
+        "scenario_type": "evolving_topic_opportunity",
+        "situation": "Cross-functional frontend and internationalization planning meeting.",
+        "objective": "Advise storing all timestamps in ISO 8601 UTC and delegating localized formatting to browser Intl.DateTimeFormat.",
+        "communication_goals": [
+            "Advise storing all timestamps in ISO 8601 UTC and delegating localized formatting to browser Intl.DateTimeFormat."
+        ],
+        "response_preferences": {
+            "style": "natural",
+            "length": "concise",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Ensure the recommendation covers both backend storage consistency and client localization."
+        ],
+        "messages": [
+            "First on the agenda: Japanese and German translations for the navigation bar buttons look good and fit our layout.",
+            "Moving on to date display: we noticed European beta users got confused when dates displayed as MM/DD/YYYY.",
+            "Someone suggested generating localized date strings directly on the Python backend based on the user's saved account profile.",
+            "That sounds like it could cause caching problems if multiple locales share cached API responses.",
+            "How should we standardize date representations between our API and the client UI?"
+        ],
+        "expected_relevance": True,
+        "expected_contribution_opportunity": "Recommend keeping backend APIs strictly in ISO 8601 UTC strings and using the native browser `Intl.DateTimeFormat` API for client-side rendering.",
+        "expected_response_characteristics": {
+            "response_type": "direct_answer",
+            "key_points": ["APIs return standard ISO 8601 UTC timestamps (preserving cacheability)", "Client formats dates using browser native Intl.DateTimeFormat with user locale", "eliminates server-side timezone rendering complexity"],
+            "tone": "clear, practical, and solution-focused"
+        },
+        "reference_facts": [
+            "Returning ISO 8601 UTC strings allows edge and CDN HTTP responses to be cached globally across all user locales.",
+            "The JavaScript `Intl.DateTimeFormat` API renders localized dates according to the client browser's locale and timezone without extra bundle weight."
+        ],
+        "expected_decision_explanation": "The meeting transitioned from UI translations to date handling standards, ending with an explicit question on how to handle API-to-client date representations."
+    },
+
+    # =========================================================================
+    # NEGATIVE RELEVANCE SCENARIOS (12)
+    # =========================================================================
+    {
+        "scenario_id": "neg_01_completely_unrelated",
+        "scenario_category": "negative",
+        "scenario_type": "completely_unrelated",
+        "situation": "Developer attending an open team sync while preparing for a PostgreSQL index optimization discussion.",
+        "objective": "Discuss B-tree vs GIN indexing strategies for PostgreSQL JSONB columns.",
+        "communication_goals": [
+            "Recommend GIN indexes with jsonb_path_ops for fast key-value lookups."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "concise",
+            "technical_level": "advanced"
+        },
+        "constraints": [
+            "Only intervene when database topics are under discussion."
+        ],
+        "messages": [
+            "Does anyone know if the food trucks are parked outside building 4 today?",
+            "I checked Slack, and it looks like taco truck and Greek gyros are there until 2 PM.",
+            "Nice, let's grab lunch together at 12:30 before the afternoon all-hands.",
+            "I will book the picnic tables outside so we can get some fresh air."
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "PostgreSQL GIN indexing on JSONB is a database query optimization topic."
+        ],
+        "expected_decision_explanation": "The conversation is entirely social chat about food trucks and lunch plans, completely unrelated to PostgreSQL indexing."
+    },
+    {
+        "scenario_id": "neg_02_all_goals_already_addressed",
+        "scenario_category": "negative",
+        "scenario_type": "all_goals_addressed",
+        "situation": "Kubernetes cluster migration readiness review.",
+        "objective": "Ensure Horizontal Pod Autoscaler (HPA) evaluates both memory and custom Prometheus metrics alongside CPU.",
+        "communication_goals": [
+            "Ensure HPA evaluates both memory and custom metrics, not just CPU."
+        ],
+        "response_preferences": {
+            "style": "professional",
+            "length": "concise",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Do not repeat points that the team has already confirmed."
+        ],
+        "messages": [
+            "Let's review the Horizontal Pod Autoscaler configuration for the order service before Friday.",
+            "Earlier we were only scaling on CPU utilization, which failed during memory-heavy batch spikes.",
+            "We updated the HPA manifest yesterday: it now monitors container memory utilization at 75% threshold and a custom Prometheus metric for Kafka consumer lag.",
+            "Both metrics were tested in staging and successfully triggered scale-out when consumer lag exceeded 500 messages.",
+            "The HPA setup is complete, validated, and signed off."
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "The team has already implemented and validated HPA scaling on both memory and custom Prometheus Kafka metrics."
+        ],
+        "expected_decision_explanation": "The team has already implemented and validated the exact communication goal; speaking now would simply repeat what is already done."
+    },
+    {
+        "scenario_id": "neg_03_repeated_information",
+        "scenario_category": "negative",
+        "scenario_type": "repeated_information",
+        "situation": "Backend engineering architecture review on cache stampede mitigation.",
+        "objective": "Suggest adding randomized jitter to Redis TTL expirations to prevent thundering herd problems.",
+        "communication_goals": [
+            "Suggest adding jitter to cache TTLs to avoid thundering herd."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "short",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Never repeat a point that another participant just articulated."
+        ],
+        "messages": [
+            "When all cached product catalog entries expire at midnight simultaneously, the database gets hammered.",
+            "We definitely need to prevent this cache stampede from crashing PostgreSQL.",
+            "I just pushed a PR that adds random jitter of 0 to 300 seconds to all our cache expiration TTLs.",
+            "That spreads out the expirations across a 5-minute window so we will not see the thundering herd effect anymore."
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "Adding jitter to cache expiration TTLs spreads out key expirations over time."
+        ],
+        "expected_decision_explanation": "Another engineer literally just announced they implemented randomized TTL jitter to prevent thundering herd; repeating this adds no new information."
+    },
+    {
+        "scenario_id": "neg_04_insufficient_context",
+        "scenario_category": "negative",
+        "scenario_type": "insufficient_context",
+        "situation": "Enterprise software consultancy discovery call with a new client.",
+        "objective": "Recommend bounded contexts and domain-driven design principles for microservices decomposition.",
+        "communication_goals": [
+            "Advise on establishing bounded contexts before splitting the monolith."
+        ],
+        "response_preferences": {
+            "style": "professional",
+            "length": "concise",
+            "technical_level": "advanced"
+        },
+        "constraints": [
+            "Do not provide architectural recommendations until the client explains their domain."
+        ],
+        "messages": [
+            "Hello, can you hear me okay?",
+            "Yes, audio is clear on my end."
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [],
+        "expected_decision_explanation": "The transcript contains only two audio-check greeting messages; available context is far too insufficient for domain decomposition advice."
+    },
+    {
+        "scenario_id": "neg_05_superficial_keyword_match",
+        "scenario_category": "negative",
+        "scenario_type": "superficial_keyword_match",
+        "situation": "Engineering morning standup with casual conversational warm-up.",
+        "objective": "Promote adopting Apache Kafka for asynchronous order event processing.",
+        "communication_goals": [
+            "Promote Kafka event streams for decoupling order checkout from billing."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "concise",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Do not force work topics into casual non-work conversations."
+        ],
+        "messages": [
+            "Did anyone end up reading over the weekend?",
+            "I finished Franz Kafka's novella The Metamorphosis yesterday.",
+            "That story is wonderfully bizarre, especially Gregor Samsa waking up as an insect.",
+            "Classic literature really had a different way of capturing existential isolation."
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "Franz Kafka was a 20th-century novelist; Apache Kafka is an open-source distributed event store."
+        ],
+        "expected_decision_explanation": "Although the keyword 'Kafka' appears repeatedly, the semantic context is 20th-century literature, not distributed message streaming."
+    },
+    {
+        "scenario_id": "neg_06_unrelated_to_objective",
+        "scenario_category": "negative",
+        "scenario_type": "unrelated_to_objective",
+        "situation": "Company-wide all-hands meeting.",
+        "objective": "Propose migrating the frontend web app from React to Svelte for lower bundle sizes.",
+        "communication_goals": [
+            "Present bundle size savings and reactive performance benefits of Svelte."
+        ],
+        "response_preferences": {
+            "style": "natural",
+            "length": "concise",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Only propose frontend framework migrations during frontend technical forums."
+        ],
+        "messages": [
+            "Our facilities team has completed the renovation of the 5th floor collaborative workspace.",
+            "We installed new acoustic dampening panels and ergonomic standing desks.",
+            "Please ensure you reserve conference rooms at least 24 hours in advance via Google Calendar.",
+            "Building security also reminds everyone to wear their guest badges at all times."
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "Office facility management and room reservations have no relation to web frontend frameworks."
+        ],
+        "expected_decision_explanation": "The conversation is about office facilities and conference room policies, having zero relevance to web framework migrations."
+    },
+    {
+        "scenario_id": "neg_07_unsupported_claims_required",
+        "scenario_category": "negative",
+        "scenario_type": "unsupported_claims_required",
+        "situation": "Executive leadership sync reviewing quarterly product KPIs.",
+        "objective": "Discuss customer churn rates following the recent pricing plan update.",
+        "communication_goals": [
+            "Report customer retention numbers."
+        ],
+        "response_preferences": {
+            "style": "professional",
+            "length": "concise",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Strictly do not quote unverified numbers or make ungrounded retention claims without official data science signoff."
+        ],
+        "messages": [
+            "Does anyone here have the finalized Day-60 retention metrics after we removed the free tier?",
+            "The data team told me they are still deduplicating accounts and running cohort anomaly checks.",
+            "I need someone to give me an exact churn percentage right now for the board presentation slide.",
+            "Can someone just estimate what the churn rate was this past month?"
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "Data science team has not completed cohort validation for Day-60 retention metrics.",
+            "Providing a specific percentage would constitute an unsupported claim in violation of constraints."
+        ],
+        "expected_decision_explanation": "Providing an estimated churn percentage would violate the user's hard constraint prohibiting unverified claims without data science signoff."
+    },
+    {
+        "scenario_id": "neg_08_no_useful_contribution",
+        "scenario_category": "negative",
+        "scenario_type": "no_useful_contribution",
+        "situation": "Emergency site reliability engineering incident bridge during a live failover.",
+        "objective": "Explain database replica promotion procedures.",
+        "communication_goals": [
+            "Guide team on manual replica promotion commands."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "short",
+            "technical_level": "advanced"
+        },
+        "constraints": [
+            "Do not interrupt active automated operations."
+        ],
+        "messages": [
+            "Primary database node has become unresponsive to heartbeats.",
+            "Automated RDS failover has been triggered by the health monitoring daemon.",
+            "Target replica us-east-1b is currently promoting to primary.",
+            "Failover completed successfully in 28 seconds. DNS records have updated and traffic is flowing normally."
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "The automated RDS failover already completed successfully in 28 seconds."
+        ],
+        "expected_decision_explanation": "The automated system has already executed the failover successfully; manual promotion instructions are moot and unhelpful."
+    },
+    {
+        "scenario_id": "neg_09_topic_shifted_away",
+        "scenario_category": "negative",
+        "scenario_type": "topic_shifted_away",
+        "situation": "Sprint planning session where technical topics were formally closed.",
+        "objective": "Discuss gRPC vs REST performance benchmarks for internal microservices.",
+        "communication_goals": [
+            "Highlight gRPC serialization efficiency over JSON."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "concise",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Respect meeting transitions and do not re-open closed agenda topics."
+        ],
+        "messages": [
+            "We had a good discussion on internal service protocols earlier.",
+            "That agenda item is now concluded, so let's shift to our final topic for the day.",
+            "We need to finalize the holiday on-call schedule for the last two weeks of December.",
+            "Who can take the secondary pager shift between Christmas and New Year's?"
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "The protocol discussion was formally concluded by the meeting chair."
+        ],
+        "expected_decision_explanation": "The meeting formally closed the protocol discussion and transitioned to on-call scheduling; chiming in with gRPC points now is off-topic."
+    },
+    {
+        "scenario_id": "neg_10_contribution_already_present",
+        "scenario_category": "negative",
+        "scenario_type": "contribution_already_present",
+        "situation": "Web development team tooling evaluation meeting.",
+        "objective": "Recommend replacing Webpack with Vite for rapid local development hot module replacement.",
+        "communication_goals": [
+            "Recommend Vite to improve local dev cold starts and HMR times."
+        ],
+        "response_preferences": {
+            "style": "technical",
+            "length": "concise",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Do not echo recommendations already unanimously adopted."
+        ],
+        "messages": [
+            "Our Webpack build times on local machines take over 60 seconds to boot up.",
+            "I evaluated Vite on our main customer dashboard repo last week.",
+            "It dropped our cold dev start from 62 seconds down to 400 milliseconds using native ES modules.",
+            "I recommend we migrate our build pipeline to Vite starting next sprint.",
+            "I completely agree, let's make the switch to Vite as proposed."
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "Vite replaces Webpack bundling in dev mode with native ES modules (ESM) over HTTP.",
+            "The team has already proposed and unanimously accepted the exact migration to Vite."
+        ],
+        "expected_decision_explanation": "Another developer already presented the exact benchmark and proposal for Vite, and the team unanimously agreed. Speaking up would merely echo consensus."
+    },
+    {
+        "scenario_id": "neg_11_constraints_prohibit_response",
+        "scenario_category": "negative",
+        "scenario_type": "constraints_prohibit_response",
+        "situation": "Cross-company technical consortium discussing observability tooling.",
+        "objective": "Discuss observability and cloud logging costs.",
+        "communication_goals": [
+            "Share negotiated vendor pricing discounts."
+        ],
+        "response_preferences": {
+            "style": "professional",
+            "length": "short",
+            "technical_level": "intermediate"
+        },
+        "constraints": [
+            "Strict Non-Disclosure Agreement (NDA): Under no circumstances disclose specific vendor pricing, discount percentages, or commercial terms."
+        ],
+        "messages": [
+            "We are comparing Datadog and Dynatrace for cloud APM across our multi-cloud deployment.",
+            "Datadog list pricing per host is quite steep for small companies.",
+            "Does anyone here have the confidential enterprise discount tier percentage their sales team negotiated with Datadog?",
+            "If someone could share the exact dollar per host rate they secured, that would help our negotiation."
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "Enterprise commercial contracts contain strict confidentiality clauses prohibiting disclosure of custom discounted pricing."
+        ],
+        "expected_decision_explanation": "Although someone asked for negotiated pricing, the user's hard constraint strictly prohibits disclosing proprietary contract discount terms under NDA."
+    },
+    {
+        "scenario_id": "neg_12_ambiguous_abstain_safest",
+        "scenario_category": "negative",
+        "scenario_type": "ambiguous_abstain_safest",
+        "situation": "Informal water-cooler conversation among cross-functional colleagues.",
+        "objective": "Maintain team stability and focus amidst uncertain corporate restructuring rumors.",
+        "communication_goals": [
+            "Reassure colleagues if appropriate."
+        ],
+        "response_preferences": {
+            "style": "natural",
+            "length": "short",
+            "technical_level": "beginner"
+        },
+        "constraints": [
+            "Do not participate in unconfirmed rumors regarding corporate reorganizations, layoffs, or management changes.",
+            "When in doubt, abstain completely."
+        ],
+        "messages": [
+            "Did you see the cryptic calendar invite from the VP for Friday afternoon?",
+            "Someone on Blind said our division might get merged into the enterprise business unit.",
+            "A friend in finance mentioned that project budgets are being frozen across three departments.",
+            "Do you think our roadmap is going to be scrapped next quarter?"
+        ],
+        "expected_relevance": False,
+        "expected_contribution_opportunity": "",
+        "expected_response_characteristics": {
+            "expected_status": "no_suggestion"
+        },
+        "reference_facts": [
+            "Speculative discussions based on anonymous forum posts and hearsay cannot be factually grounded."
+        ],
+        "expected_decision_explanation": "The conversation is entirely based on unverified workplace rumors and anonymous hearsay; the user's constraint mandates abstaining to prevent spreading speculation."
+    }
+]
+
+
+def generate_and_validate_dataset(target_path: Path) -> list[Scenario]:
+    """Validate all scenarios with Pydantic and write to JSONL."""
+    validated: list[Scenario] = []
+    seen_ids: set[str] = set()
+
+    positive_count = 0
+    negative_count = 0
+
+    for raw in SCENARIOS:
+        scenario = Scenario.model_validate(raw)
+        if scenario.scenario_id in seen_ids:
+            raise ValueError(f"Duplicate scenario_id: {scenario.scenario_id}")
+        seen_ids.add(scenario.scenario_id)
+
+        if scenario.scenario_category == "positive":
+            positive_count += 1
+            if not scenario.expected_relevance:
+                raise ValueError(f"Positive scenario {scenario.scenario_id} must have expected_relevance=True")
+        else:
+            negative_count += 1
+            if scenario.expected_relevance:
+                raise ValueError(f"Negative scenario {scenario.scenario_id} must have expected_relevance=False")
+
+        validated.append(scenario)
+
+    if positive_count != 12 or negative_count != 12:
+        raise ValueError(
+            f"Expected exactly 12 positive and 12 negative scenarios, got {positive_count} pos and {negative_count} neg"
+        )
+
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    with target_path.open("w", encoding="utf-8") as f:
+        for scenario in validated:
+            f.write(json.dumps(scenario.model_dump(), ensure_ascii=False) + "\n")
+
+    print(f"Successfully generated and validated {len(validated)} scenarios ({positive_count} positive, {negative_count} negative) to {target_path}")
+    return validated
+
+
+if __name__ == "__main__":
+    out_file = REPO_ROOT / "tests" / "evaluation" / "dataset.jsonl"
+    generate_and_validate_dataset(out_file)

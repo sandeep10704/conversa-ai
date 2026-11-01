@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database.repository import SessionRepository
+from app.database.repository import SessionRepository, SuggestionRepository
 from app.database.session import async_session_factory, get_db_session
 from app.schemas.session import (
     CreateSessionRequest,
@@ -18,6 +18,13 @@ async def get_session_repository(
 ) -> SessionRepository:
     """FastAPI dependency for SessionRepository."""
     return SessionRepository(session)
+
+
+async def get_suggestion_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> SuggestionRepository:
+    """FastAPI dependency for SuggestionRepository."""
+    return SuggestionRepository(session)
 
 
 class SessionStore:

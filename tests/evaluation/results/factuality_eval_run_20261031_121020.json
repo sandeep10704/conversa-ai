@@ -1,0 +1,14 @@
+[
+  {
+    "review_id": "acae6fdd-8ca7-46d1-98eb-5e493c3416dc",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 0,
+    "claim_index": 0,
+    "claim_text": "The auth-proxy connection pool hit saturation at 14:14 UTC \u2014 pool metrics show 100% utilization with acquisition timeouts spiking to 2.3s, which aligns exactly with the downstream 504 cascade.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Auth-proxy had a maximum pool limit of 100 concurrent HTTP/1.1 connections.",
+    "reviewer": null,
+    "reviewed_at": null
+  }
+]

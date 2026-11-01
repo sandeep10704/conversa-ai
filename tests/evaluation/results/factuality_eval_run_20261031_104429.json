@@ -1,0 +1,122 @@
+[
+  {
+    "review_id": "459a0e46-21c2-4b68-b6ec-9ea2883dd488",
+    "scenario_id": "pos_02_uncovered_communication_goal",
+    "suggestion_index": 0,
+    "claim_index": 0,
+    "claim_text": "The transactional outbox pattern directly addresses the missing Kafka events by writing the Kafka message to an outbox table within the same PostgreSQL transaction as the order commit.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Dual-writes across heterogeneous storage engines (PostgreSQL and Kafka) cannot guarantee atomicity without an outbox or distributed transaction.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "3acf7db1-9831-4104-9f64-38f80216e2ee",
+    "scenario_id": "pos_02_uncovered_communication_goal",
+    "suggestion_index": 0,
+    "claim_index": 1,
+    "claim_text": "This ensures the event is persisted atomically with the order, eliminating the race condition where the DB commit succeeds but the Kafka send fails.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "be6bc584-280f-4e5d-9829-0b8b2d6395c9",
+    "scenario_id": "pos_02_uncovered_communication_goal",
+    "suggestion_index": 0,
+    "claim_index": 2,
+    "claim_text": "A separate outbox poller then reliably publishes these events to Kafka, removing the need for application-level retry loops that can crash mid-retry.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "The transactional outbox pattern writes events to an outbox table in the same database transaction as business data.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "4823b496-5296-43e3-b125-310f0543080a",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 0,
+    "claim_index": 0,
+    "claim_text": "That's exactly why Raft uses randomized election timeouts.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Raft uses randomized election timeouts (typically between 150ms and 300ms) to ensure split votes are rare and quickly resolved.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "b7fa4704-002a-4015-b376-5157b5eca325",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 0,
+    "claim_index": 1,
+    "claim_text": "Each follower picks a random wait time before starting an election, so it's very unlikely three nodes time out at the exact same millisecond.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Randomization spreads out election starts so usually a single follower times out, transitions to candidate, and wins the term before others timeout.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "6da86642-65d9-4dfa-b575-b821ded0a6c0",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 0,
+    "claim_index": 2,
+    "claim_text": "Even if they do split the vote, none of them wins a majority, so they all just wait another random period and try again.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Randomization spreads out election starts so usually a single follower times out, transitions to candidate, and wins the term before others timeout.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "411c042a-8c07-414d-85d2-7c4d15210ece",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 0,
+    "claim_index": 3,
+    "claim_text": "Eventually one node's timer fires first, it collects a majority, and the deadlock breaks.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Randomization spreads out election starts so usually a single follower times out, transitions to candidate, and wins the term before others timeout.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "27de72cd-fe3d-4fd4-8d8c-e9350e35f822",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 1,
+    "claim_index": 0,
+    "claim_text": "Raft doesn't rely on perfect timing.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": null,
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "9226bf0d-56a3-4503-bdee-e2e83873f14a",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 1,
+    "claim_index": 1,
+    "claim_text": "After a split vote, each candidate backs off for a different random interval before retrying.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Randomization spreads out election starts so usually a single follower times out, transitions to candidate, and wins the term before others timeout.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "93b10dc4-d514-4f67-acaa-c47e1c63a4e9",
+    "scenario_id": "pos_03_concept_explanation",
+    "suggestion_index": 1,
+    "claim_index": 2,
+    "claim_text": "One of them will inevitably start the next election before the others, giving it a clear path to a majority instead of repeating the same tie forever.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Randomization spreads out election starts so usually a single follower times out, transitions to candidate, and wins the term before others timeout.",
+    "reviewer": null,
+    "reviewed_at": null
+  }
+]

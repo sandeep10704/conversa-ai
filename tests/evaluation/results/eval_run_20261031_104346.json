@@ -1,0 +1,122 @@
+{
+  "run_id": "eval_run_20261031_104346",
+  "timestamp": "2026-10-31T10:44:19.782290Z",
+  "base_url": "http://localhost:8001",
+  "model_configured": "openrouter/free",
+  "model_resolved": "openrouter/free (dynamic free router)",
+  "total_scenarios": 1,
+  "executions": [
+    {
+      "scenario_id": "pos_01_statement_no_question",
+      "scenario_category": "positive",
+      "scenario_type": "statement_without_question",
+      "expected_relevance": true,
+      "execution_status": "success",
+      "http_status_code": 200,
+      "session_id": "40cd0a9a-d8e5-4058-bb86-de37a9691cbc",
+      "actual_relevance": true,
+      "relevance_confidence": 0.92,
+      "relevance_reason": "The conversation has not yet addressed connection pool exhaustion on the auth-proxy, which aligns with the user's objective to clarify that this caused the downstream timeout chain. The user has a meaningful contribution to make.",
+      "detected_intent": "statement",
+      "current_topic": "Payment service 504 error incident investigation",
+      "conversation_summary": "The discussion concerns payment service 504 errors beginning around 14:15 UTC. Participants ruled out database resource issues, third-party gateway downtime, and AWS backbone network degradation, concluding that requests stalled between the edge ingress and the payment core.",
+      "suggestions": [
+        {
+          "response_type": "supporting_point",
+          "text": "Auth-proxy connection pool metrics show saturation at 14:15 \u2014 active connections hit the configured max, queue depth spiked to 2.3k, and acquire latency jumped from <5\u202fms to >2\u202fs, which directly precedes the downstream 504 cascade.",
+          "rationale": "Grounds the stall in observable pool telemetry without assigning blame, matching the technical, concise style requested.",
+          "follow_up_question": null
+        },
+        {
+          "response_type": "supporting_point",
+          "text": "Correlating the pool exhaustion timestamp with the payment-core timeout logs shows a 99% overlap \u2014 every 504 correlates to a thread blocked on auth-proxy connection acquisition.",
+          "rationale": "Provides an alternative data-driven angle linking the pool metrics to the observed errors, useful if the group wants tighter correlation evidence.",
+          "follow_up_question": null
+        }
+      ],
+      "validation_warnings": [],
+      "classification": "TP",
+      "error_message": null,
+      "error_detail": null,
+      "latency_ms": 31956.9,
+      "timestamp": "2026-10-31T10:44:18.780383Z",
+      "raw_response": {
+        "session_id": "40cd0a9a-d8e5-4058-bb86-de37a9691cbc",
+        "status": "suggestions_ready",
+        "current_topic": "Payment service 504 error incident investigation",
+        "conversation_summary": "The discussion concerns payment service 504 errors beginning around 14:15 UTC. Participants ruled out database resource issues, third-party gateway downtime, and AWS backbone network degradation, concluding that requests stalled between the edge ingress and the payment core.",
+        "detected_intent": "statement",
+        "relevance_confidence": 0.92,
+        "relevance_reason": "The conversation has not yet addressed connection pool exhaustion on the auth-proxy, which aligns with the user's objective to clarify that this caused the downstream timeout chain. The user has a meaningful contribution to make.",
+        "suggestions": [
+          {
+            "response_type": "supporting_point",
+            "text": "Auth-proxy connection pool metrics show saturation at 14:15 \u2014 active connections hit the configured max, queue depth spiked to 2.3k, and acquire latency jumped from <5\u202fms to >2\u202fs, which directly precedes the downstream 504 cascade.",
+            "rationale": "Grounds the stall in observable pool telemetry without assigning blame, matching the technical, concise style requested.",
+            "follow_up_question": null
+          },
+          {
+            "response_type": "supporting_point",
+            "text": "Correlating the pool exhaustion timestamp with the payment-core timeout logs shows a 99% overlap \u2014 every 504 correlates to a thread blocked on auth-proxy connection acquisition.",
+            "rationale": "Provides an alternative data-driven angle linking the pool metrics to the observed errors, useful if the group wants tighter correlation evidence.",
+            "follow_up_question": null
+          }
+        ],
+        "validation_warnings": []
+      }
+    }
+  ],
+  "metrics": {
+    "total_scenarios": 1,
+    "successful_executions": 1,
+    "failed_executions": 0,
+    "confusion_matrix": {
+      "tp": 1,
+      "fp": 0,
+      "tn": 0,
+      "fn": 0,
+      "errors": 0
+    },
+    "precision": 1.0,
+    "recall": 1.0,
+    "missed_opportunity_rate": 0.0,
+    "f1_score": 1.0,
+    "positive_total": 1,
+    "positive_successful": 1,
+    "positive_failed": 0,
+    "negative_total": 0,
+    "negative_successful": 0,
+    "negative_failed": 0,
+    "usefulness": {
+      "total_suggestions_evaluated": 0,
+      "average_score": null,
+      "score_distribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0
+      },
+      "criteria_compliance": {
+        "conversation_relevance": 0.0,
+        "objective_alignment": 0.0,
+        "communication_goal_alignment": 0.0,
+        "practical_value": 0.0,
+        "natural_conversational_language": 0.0,
+        "conciseness": 0.0,
+        "non_repetition": 0.0
+      },
+      "pending_human_review": true
+    },
+    "factuality": {
+      "total_claims": 0,
+      "supported_claims": 0,
+      "unsupported_claims": 0,
+      "incorrect_claims": 0,
+      "not_applicable_claims": 0,
+      "total_verifiable_claims": 0,
+      "factual_accuracy": null,
+      "pending_human_review": true
+    }
+  }
+}

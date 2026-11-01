@@ -1,0 +1,26 @@
+[
+  {
+    "review_id": "9694d215-e6d4-44a0-b0a7-d1eef823d163",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 0,
+    "claim_index": 0,
+    "claim_text": "Auth-proxy connection pool metrics show saturation at 14:15 \u2014 active connections hit the configured max, queue depth spiked to 2.3k, and acquire latency jumped from <5\u202fms to >2\u202fs, which directly precedes the downstream 504 cascade.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Auth-proxy had a maximum pool limit of 100 concurrent HTTP/1.1 connections.",
+    "reviewer": null,
+    "reviewed_at": null
+  },
+  {
+    "review_id": "f26edf05-b27e-4533-8d9a-e6b5f2f206fc",
+    "scenario_id": "pos_01_statement_no_question",
+    "suggestion_index": 1,
+    "claim_index": 0,
+    "claim_text": "Correlating the pool exhaustion timestamp with the payment-core timeout logs shows a 99% overlap \u2014 every 504 correlates to a thread blocked on auth-proxy connection acquisition.",
+    "classification": null,
+    "explanation": null,
+    "reference_fact_matched": "Auth-proxy had a maximum pool limit of 100 concurrent HTTP/1.1 connections.",
+    "reviewer": null,
+    "reviewed_at": null
+  }
+]

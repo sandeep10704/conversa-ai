@@ -1,0 +1,86 @@
+{
+  "run_id": "eval_run_20261031_104047",
+  "timestamp": "2026-10-31T10:41:12.336153Z",
+  "base_url": "http://localhost:8001",
+  "model_configured": "openrouter/free",
+  "model_resolved": "openrouter/free (dynamic free router)",
+  "total_scenarios": 1,
+  "executions": [
+    {
+      "scenario_id": "pos_01_statement_no_question",
+      "scenario_category": "positive",
+      "scenario_type": "statement_without_question",
+      "expected_relevance": true,
+      "execution_status": "failed",
+      "http_status_code": 502,
+      "session_id": null,
+      "actual_relevance": null,
+      "relevance_confidence": null,
+      "relevance_reason": null,
+      "detected_intent": null,
+      "current_topic": null,
+      "conversation_summary": null,
+      "suggestions": [],
+      "validation_warnings": [],
+      "classification": "ERROR",
+      "error_message": "Request failed after 3 retries",
+      "error_detail": "Suggest endpoint returned HTTP 502: {\"detail\":\"Agent execution failed. Check server logs.\"}",
+      "latency_ms": 24142.36,
+      "timestamp": "2026-10-31T10:41:11.333876Z",
+      "raw_response": null
+    }
+  ],
+  "metrics": {
+    "total_scenarios": 1,
+    "successful_executions": 0,
+    "failed_executions": 1,
+    "confusion_matrix": {
+      "tp": 0,
+      "fp": 0,
+      "tn": 0,
+      "fn": 0,
+      "errors": 1
+    },
+    "precision": 0.0,
+    "recall": 0.0,
+    "missed_opportunity_rate": 0.0,
+    "f1_score": 0.0,
+    "positive_total": 1,
+    "positive_successful": 0,
+    "positive_failed": 1,
+    "negative_total": 0,
+    "negative_successful": 0,
+    "negative_failed": 0,
+    "usefulness": {
+      "total_suggestions_evaluated": 0,
+      "average_score": null,
+      "score_distribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0
+      },
+      "criteria_compliance": {
+        "conversation_relevance": 0.0,
+        "objective_alignment": 0.0,
+        "communication_goal_alignment": 0.0,
+        "practical_value": 0.0,
+        "natural_conversational_language": 0.0,
+        "conciseness": 0.0,
+        "non_repetition": 0.0
+      },
+      "pending_human_review": true
+    },
+    "factuality": {
+      "total_claims": 0,
+      "supported_claims": 0,
+      "unsupported_claims": 0,
+      "incorrect_claims": 0,
+      "not_applicable_claims": 0,
+      "total_verifiable_claims": 0,
+      "factual_accuracy": null,
+      "pending_human_review": true
+    }
+  }
+}

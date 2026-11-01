@@ -50,7 +50,8 @@ class SuggestionItem(BaseModel):
         "supporting_point",
         "polite_disagreement",
         "example",
-        "follow_up_question"
+        "follow_up_question",
+        "perspective"
     ]
 
     text: str

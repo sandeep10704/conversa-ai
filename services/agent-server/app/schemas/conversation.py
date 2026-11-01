@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -31,3 +31,13 @@ class TranscriptMessageResponse(BaseModel):
     source: str
 
     created_at: datetime
+
+
+class SpeechActivityRequest(BaseModel):
+
+    event_id: UUID = Field(default_factory=uuid4)
+    activity_type: Literal["speech_onset", "speech_resumed"] = "speech_onset"
+    activity_sequence: int = Field(ge=1)
+    timestamp: float
+    source_sequence: Optional[int] = None
+    last_finalized_sequence: Optional[int] = None

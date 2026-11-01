@@ -1,0 +1,155 @@
+{
+  "run_id": "eval_run_20261031_101950",
+  "timestamp": "2026-10-31T10:22:58.700336Z",
+  "base_url": "http://localhost:8001",
+  "model_configured": "openrouter/free",
+  "model_resolved": "openrouter/free (dynamic free router)",
+  "total_scenarios": 2,
+  "executions": [
+    {
+      "scenario_id": "pos_01_statement_no_question",
+      "scenario_category": "positive",
+      "scenario_type": "statement_without_question",
+      "expected_relevance": true,
+      "execution_status": "success",
+      "http_status_code": 200,
+      "session_id": "45fb03f9-fd89-4c49-b6b9-b850b550cc33",
+      "actual_relevance": true,
+      "relevance_confidence": 0.95,
+      "relevance_reason": "The discussion is directly aligned with the user's objective of diagnosing the payment latency spike. The conversation has narrowed the stall to between edge ingress and the payment core, but the specific root cause\u2014connection pool exhaustion on the auth-proxy\u2014has not yet been raised. The user has a clear, meaningful technical contribution to add that would advance the incident review and satisfy their communication goal.",
+      "detected_intent": "statement",
+      "current_topic": "Diagnosing 504 errors in the payment service",
+      "conversation_summary": "The payment service began returning 504 errors at 14:15 UTC while database metrics, third\u2011party gateway uptime, and network latency remained normal, suggesting a stall between edge ingress and the payment core.",
+      "suggestions": [
+        {
+          "response_type": "supporting_point",
+          "text": "Auth-proxy connection pool metrics show saturation at 14:14 UTC \u2014 active connections hit the 500\u2011limit, wait\u2011queue depth spiked to 1,200, and borrow latency jumped from 2\u202fms to 450\u202fms. That exhaustion propagated back\u2011pressure to the edge, triggering the 504 cascade.",
+          "rationale": "Directly answers the unresolved stall question with pool\u2011level data, avoids blame, and stays concise.",
+          "follow_up_question": null
+        },
+        {
+          "response_type": "supporting_point",
+          "text": "Pool telemetry confirms the auth\u2011proxy ran out of connections at 14:14: max\u2011pool=500, borrowed=500, waiters\u22481.2k, avg borrow time 450\u202fms. The resulting queue\u2011backlog stalled requests before they reached the payment core.",
+          "rationale": "Alternative phrasing with the same metrics, slightly more granular for deeper technical audience.",
+          "follow_up_question": null
+        }
+      ],
+      "validation_warnings": [],
+      "classification": "TP",
+      "error_message": null,
+      "error_detail": null,
+      "latency_ms": 168837.97,
+      "timestamp": "2026-10-31T10:22:39.736033Z",
+      "raw_response": {
+        "session_id": "45fb03f9-fd89-4c49-b6b9-b850b550cc33",
+        "status": "suggestions_ready",
+        "current_topic": "Diagnosing 504 errors in the payment service",
+        "conversation_summary": "The payment service began returning 504 errors at 14:15 UTC while database metrics, third\u2011party gateway uptime, and network latency remained normal, suggesting a stall between edge ingress and the payment core.",
+        "detected_intent": "statement",
+        "relevance_confidence": 0.95,
+        "relevance_reason": "The discussion is directly aligned with the user's objective of diagnosing the payment latency spike. The conversation has narrowed the stall to between edge ingress and the payment core, but the specific root cause\u2014connection pool exhaustion on the auth-proxy\u2014has not yet been raised. The user has a clear, meaningful technical contribution to add that would advance the incident review and satisfy their communication goal.",
+        "suggestions": [
+          {
+            "response_type": "supporting_point",
+            "text": "Auth-proxy connection pool metrics show saturation at 14:14 UTC \u2014 active connections hit the 500\u2011limit, wait\u2011queue depth spiked to 1,200, and borrow latency jumped from 2\u202fms to 450\u202fms. That exhaustion propagated back\u2011pressure to the edge, triggering the 504 cascade.",
+            "rationale": "Directly answers the unresolved stall question with pool\u2011level data, avoids blame, and stays concise.",
+            "follow_up_question": null
+          },
+          {
+            "response_type": "supporting_point",
+            "text": "Pool telemetry confirms the auth\u2011proxy ran out of connections at 14:14: max\u2011pool=500, borrowed=500, waiters\u22481.2k, avg borrow time 450\u202fms. The resulting queue\u2011backlog stalled requests before they reached the payment core.",
+            "rationale": "Alternative phrasing with the same metrics, slightly more granular for deeper technical audience.",
+            "follow_up_question": null
+          }
+        ],
+        "validation_warnings": []
+      }
+    },
+    {
+      "scenario_id": "neg_01_completely_unrelated",
+      "scenario_category": "negative",
+      "scenario_type": "completely_unrelated",
+      "expected_relevance": false,
+      "execution_status": "success",
+      "http_status_code": 200,
+      "session_id": "9a47c6a0-2b4b-4923-a81e-6b3c119c19f1",
+      "actual_relevance": false,
+      "relevance_confidence": 0.95,
+      "relevance_reason": "The current conversation about planning a group lunch with food trucks is completely unrelated to the user's objective of discussing PostgreSQL B-tree vs GIN indexing strategies for JSONB columns. The user's communication goals regarding recommending GIN indexes with jsonb_path_ops cannot be meaningfully addressed in this food-related discussion, and there is no opportunity for the user to contribute relevant technical insights.",
+      "detected_intent": "unclear",
+      "current_topic": "Planning a group lunch with food trucks",
+      "conversation_summary": "The conversation involves inquiring about food trucks outside building 4, confirming their availability until 2 PM,",
+      "suggestions": [],
+      "validation_warnings": [],
+      "classification": "TN",
+      "error_message": null,
+      "error_detail": null,
+      "latency_ms": 16960.91,
+      "timestamp": "2026-10-31T10:22:57.698024Z",
+      "raw_response": {
+        "session_id": "9a47c6a0-2b4b-4923-a81e-6b3c119c19f1",
+        "status": "no_suggestion",
+        "current_topic": "Planning a group lunch with food trucks",
+        "conversation_summary": "The conversation involves inquiring about food trucks outside building 4, confirming their availability until 2 PM,",
+        "detected_intent": "unclear",
+        "relevance_confidence": 0.95,
+        "relevance_reason": "The current conversation about planning a group lunch with food trucks is completely unrelated to the user's objective of discussing PostgreSQL B-tree vs GIN indexing strategies for JSONB columns. The user's communication goals regarding recommending GIN indexes with jsonb_path_ops cannot be meaningfully addressed in this food-related discussion, and there is no opportunity for the user to contribute relevant technical insights.",
+        "suggestions": [],
+        "validation_warnings": []
+      }
+    }
+  ],
+  "metrics": {
+    "total_scenarios": 2,
+    "successful_executions": 2,
+    "failed_executions": 0,
+    "confusion_matrix": {
+      "tp": 1,
+      "fp": 0,
+      "tn": 1,
+      "fn": 0,
+      "errors": 0
+    },
+    "precision": 1.0,
+    "recall": 1.0,
+    "missed_opportunity_rate": 0.0,
+    "f1_score": 1.0,
+    "positive_total": 1,
+    "positive_successful": 1,
+    "positive_failed": 0,
+    "negative_total": 1,
+    "negative_successful": 1,
+    "negative_failed": 0,
+    "usefulness": {
+      "total_suggestions_evaluated": 0,
+      "average_score": null,
+      "score_distribution": {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0
+      },
+      "criteria_compliance": {
+        "conversation_relevance": 0.0,
+        "objective_alignment": 0.0,
+        "communication_goal_alignment": 0.0,
+        "practical_value": 0.0,
+        "natural_conversational_language": 0.0,
+        "conciseness": 0.0,
+        "non_repetition": 0.0
+      },
+      "pending_human_review": true
+    },
+    "factuality": {
+      "total_claims": 0,
+      "supported_claims": 0,
+      "unsupported_claims": 0,
+      "incorrect_claims": 0,
+      "not_applicable_claims": 0,
+      "total_verifiable_claims": 0,
+      "factual_accuracy": null,
+      "pending_human_review": true
+    }
+  }
+}
