@@ -26,10 +26,9 @@ The platform is engineered with **FastAPI**, **Silero VAD**, **faster-whisper**,
 - [Automated Testing & Benchmarks](#automated-testing--benchmarks)
 - [Demo Video](#demo-video)
 - [Application Screenshots](#application-screenshots)
-- [Demonstration Script (2–3 Minutes)](#demonstration-script-23-minutes)
 - [Current Limitations](#current-limitations)
 - [Future Improvements & Roadmap](#future-improvements--roadmap)
-- [Resume & Portfolio Highlights](#resume--portfolio-highlights)
+
 
 ---
 
@@ -664,50 +663,6 @@ Key operational moments captured from the recorded demonstration session:
 
 ---
 
-## Demonstration Script (2–3 Minutes)
-
-Follow this repeatable step-by-step protocol to demonstrate Conversa AI using the browser workspace (`client/index.html`):
-
-1. **Step 1: Open the Workspace**
-   - Navigate to `http://localhost:3000`.
-   - Observe the dark-themed workspace layout: Session Configuration (left), Live Transcript & Audio Meter (middle), and Grounded Suggestions (right).
-2. **Step 2: Enter Participant Context**
-   - In the "Participant Context" panel, enter:
-     - **Name**: `Sandeep`
-     - **Role**: `Backend Developer`
-     - **Responsibilities**: `Audio pipeline and backend architecture`
-     - **Expertise Keywords**: `Kafka, PostgreSQL, WebSockets, FastAPI`
-     - **Session Goals**: `Identify latency bottlenecks in streaming ingestion`
-   - Click **"Initialize Session"**. Observe the active Session UUID and status indicator turning green (`active`).
-3. **Step 3: Connect Live Audio**
-   - Click **"Start Audio Streaming"**.
-   - Grant microphone permissions in the browser.
-   - Observe the Audio Status indicator turn green (`Streaming`) and the live canvas audio level meter respond dynamically to speech.
-4. **Step 4: Speak Technical Dialogue**
-   - Speak clearly into the microphone:
-     *"We are seeing consumer lag when audio chunks arrive in bursts. The transcription worker is processing slower than chunks arrive. We need to find where the bottleneck is."*
-   - Observe the interim partial hypotheses appearing in yellow, followed by the finalized utterance with a monotonic sequence number in the transcript list.
-5. **Step 5: Request Grounded Suggestions**
-   - Click the **"Request Suggestion"** button.
-   - Observe the LangGraph execution status change to `Evaluating Relevance...` $\to$ `Generating Grounded Suggestion`.
-   - Within 1–2 seconds, observe 1–2 actionable suggestions appear in the right panel, specifically referencing consumer lag, partition keying, and pipeline metrics aligned with Sandeep's backend expertise.
-6. **Step 6: Verify Anti-Fabrication & Grounding**
-   - Note that the suggestion does not invent unmentioned companies or qualifications, strictly anchoring itself to the transcript discussion and the specified expertise keywords.
-7. **Step 7: Clean Session Termination**
-   - Click **"End Session"**.
-   - Observe the session status transition to `ended`.
-   - The participant context is wiped from the UI and purged to SQL `NULL` in the database, verifying privacy compliance.
-
-### Recommended Screenshot Checklist
-
-For portfolio presentations and documentation:
-- [ ] **Screenshot 1: Session Initialization**: Workspace showing participant profile filled out with active green connection badge.
-- [ ] **Screenshot 2: Real-Time Audio & Transcription**: Live audio waveform active with streaming partial and finalized transcripts displayed in chronological order.
-- [ ] **Screenshot 3: Personalized Grounded Suggestions**: Two structured suggestions displayed in the right panel showing role-aligned technical points.
-- [ ] **Screenshot 4: Session Ended & Context Purged**: Workspace showing ended session state with cleared sensitive context.
-
----
-
 ## Current Limitations
 
 1. **Single-Operator Boundary**: Conversa AI is designed as a personal assistant for a single participant. It does not perform speaker diarization (voice identification across multiple speakers in the room).
@@ -727,7 +682,7 @@ For portfolio presentations and documentation:
 
 ---
 
-## Resume & Portfolio Highlights
+## Highlights
 
 ### Project Summary
 > **Conversa AI**: An agentic, real-time conversational intelligence platform that streams 16kHz PCM audio, extracts transcripts using local Silero VAD and Whisper, evaluates turn-completion dynamics, and generates role-grounded contribution suggestions using LangGraph and Kafka.
