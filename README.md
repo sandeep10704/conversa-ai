@@ -24,6 +24,8 @@ The platform is engineered with **FastAPI**, **Silero VAD**, **faster-whisper**,
 - [Starting the Application](#starting-the-application)
 - [API & WebSocket Reference](#api--websocket-reference)
 - [Automated Testing & Benchmarks](#automated-testing--benchmarks)
+- [Demo Video](#demo-video)
+- [Application Screenshots](#application-screenshots)
 - [Demonstration Script (2–3 Minutes)](#demonstration-script-23-minutes)
 - [Current Limitations](#current-limitations)
 - [Future Improvements & Roadmap](#future-improvements--roadmap)
@@ -377,9 +379,10 @@ Conversa AI is designed with strict boundaries separating local audio processing
 conversa-ai/
 ├── client/                               # Single-page browser client
 │   └── index.html                        # Workspace UI (Audio, Context, Transcripts, Suggestions)
-├── docs/                                 # Architectural specifications
+├── docs/                                 # Documentation, demo, and screenshots
 │   ├── audio_format_contract.md          # 16kHz PCM audio streaming protocol
-│   └── architecture_diagram.png          # System architecture visualization
+│   ├── conversa-ai-demo.mp4              # Demonstration video recording (~7 MB)
+│   └── screenshots/                      # Application workflow screenshots
 ├── infrastructure/                       # Deployment and infrastructure configuration
 │   ├── docker-compose.yml                # 10-service container configuration
 │   ├── kafka/
@@ -610,6 +613,54 @@ python3 tools/verify_end_to_end_integration.py
 ```
 
 Verifies the 7-step system lifecycle against the running Docker cluster: session creation, WebSocket audio ingestion, speech transcription, message persistence, outbox publication, manual suggestion generation, and participant context purge to `NULL`.
+
+---
+
+## Demo Video
+
+[Watch Conversa AI Demo](docs/conversa-ai-demo.mp4)
+
+The recorded demo illustrates the end-to-end local streaming and suggestion workflow:
+- **Audio Capture & Streaming**: 16 kHz mono PCM audio streamed via WebSocket to the Audio Gateway.
+- **Local Speech Processing**: Sub-millisecond Silero VAD and faster-whisper `tiny.en` transcription running entirely in local containers, generating low-latency partial hypotheses and finalized transcript utterances.
+- **Manual Request Suggestion Workflow**: Suggestions are requested via the manual "Request Suggestion" button (`POST /v1/sessions/{id}/suggest`), matching the default operational configuration (`AGENT_AUTO_RUN=false`).
+- **Deterministic Mock LLM Mode**: Executed with `MOCK_LLM=true` to demonstrate role-grounded suggestion synthesis without cloud API token costs or latency fluctuations.
+
+---
+
+## Application Screenshots
+
+Key operational moments captured from the recorded demonstration session:
+
+### Session Initialization
+
+![Session Initialization](<docs/screenshots/Screenshot 2026-11-01 at 4.26.21 PM.png>)
+
+*Initial workspace state showing single-operator participant profile (Sandeep, Backend Developer) and session goals configured prior to starting the session.*
+
+### Active Session & Live Audio Capture
+
+![Active Session & Microphone In Use](<docs/screenshots/Screenshot 2026-11-01 at 4.26.37 PM.png>)
+
+*Session initialized with unique UUID, participant profile verified and saved under single-operator isolation, and live microphone capture active.*
+
+### Live Transcription
+
+![Live Transcription](<docs/screenshots/Screenshot 2026-11-01 at 4.27.21 PM.png>)
+
+*Real-time audio level metering alongside live partial hypothesis streaming and chronological finalized utterances.*
+
+### Manual Suggestion Request
+
+![Manual Suggestion Request](<docs/screenshots/Screenshot 2026-11-01 at 4.27.29 PM.png>)
+
+*Operator manually triggering suggestion generation via the "Request Suggestion" button after four finalized discussion utterances.*
+
+### Context-Aware Suggestions
+
+![Generated Suggestions](<docs/screenshots/Screenshot 2026-11-01 at 4.27.53 PM.png>)
+
+*Structured, role-aligned `TECHNICAL_EXPLANATION` suggestion delivered under mock LLM mode (`MOCK_LLM=true`), addressing consumer lag and Kafka tuning without ungrounded fabrication.*
 
 ---
 
